@@ -5,6 +5,7 @@ end =
 struct
   structure T = Token
 
+  (* character source *)
   type cs = {source: string, current: int, line: int}
 
   fun incCurrent {source, current, line} =
@@ -44,6 +45,30 @@ struct
           SOME (#"/", cs') => comment cs'
         | _ => token (cs, T.SLASH)
 
+      fun string (cs as {source, current, line}, len) =
+        case getc cs of
+          SOME (#"\"", cs') =>
+            let val s = String.substring (source, current - len, len)
+            in token (cs', T.STRING s)
+            end
+        | SOME (c, cs') =>
+            string (if c = #"\n" then incLine cs' else cs', len + 1)
+        | NONE => (Error.error (line, "Unterminated string."); NONE)
+
+      (* TODO: test this, can we use dropl elsewhere? *)
+      fun number (cs as {source, current, ...}) =
+        let
+          val cs = StringCvt.dropl Char.isDigit getc cs
+          val cs as {current = next, ...} =
+            case getc cs of
+              SOME (#".", cs') => StringCvt.dropl Char.isDigit getc cs'
+            | _ => cs
+          val n = valOf (Real.fromString (String.substring
+            (source, current - 1, next - (current - 1))))
+        in
+          token (cs, T.NUMBER n)
+        end
+
       val scan =
         fn (#"(", cs) => token (cs, T.LEFT_PAREN)
          | (#")", cs) => token (cs, T.RIGHT_PAREN)
@@ -60,9 +85,16 @@ struct
          | (#"<", cs) => match (cs, #"=", T.LESS_EQUAL, T.LESS)
          | (#">", cs) => match (cs, #"=", T.GREATER_EQUAL, T.GREATER)
          | (#"/", cs) => matchSlash cs
+         | (#" ", cs) => scanToken cs
+         | (#"\r", cs) => scanToken cs
+         | (#"\t", cs) => scanToken cs
          | (#"\n", cs) => scanToken (incLine cs)
+         | (#"\"", cs) => string (cs, 0)
          | (c, cs) =>
-          (Error.error (line, "Unexpected character: " ^ str c); scanToken cs)
+          if Char.isDigit c then
+            number cs
+          else
+            (Error.error (line, "Unexpected character: " ^ str c); scanToken cs)
     in
       Option.mapPartial scan (getc cs)
     end

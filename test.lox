@@ -1,4 +1,8 @@
-()&{},.-+;
-*!==<>=
-// %
-%
+// comment
+(( )){} // grouping stuff
+!*+-/=<> <= == // operators
+% // fail
+"hi
+this is a string"
+""
+"

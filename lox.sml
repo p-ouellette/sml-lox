@@ -10,7 +10,7 @@ struct
 
   fun run prog =
     let val tokens = Scanner.scanTokens prog
-    in app (fn {lexeme, ...} => print (lexeme ^ "\n")) tokens
+    in app (fn t => print (Token.toString t ^ "\n")) tokens
     end
 
   fun runFile fname =

@@ -1,4 +1,4 @@
-structure Scanner :>
+structure Scanner:
 sig
   val scanTokens: string -> Token.t list
 end =
@@ -8,23 +8,49 @@ struct
   (* character source *)
   type cs = {source: string, current: int, line: int}
 
-  fun incCurrent {source, current, line} =
-    {source = source, current = current + 1, line = line}
+  fun substr (s, i, j) =
+    String.substring (s, i, j - i)
 
-  fun incLine {source, current, line} =
-    {source = source, current = current, line = line + 1}
+  fun getc {source, current, line} =
+    if current >= size source then
+      NONE
+    else
+      let
+        val c = String.sub (source, current)
+      in
+        if c = #"\n" then
+          SOME (c, {source = source, current = current + 1, line = line + 1})
+        else
+          SOME (c, {source = source, current = current + 1, line = line})
+      end
 
-  fun getc (cs as {source, current, ...}) =
-    if current >= size source then NONE
-    else SOME (String.sub (source, current), incCurrent cs)
+  (* advances cs up to the first character not matching the predicate f. *)
+  fun dropl f cs =
+    StringCvt.dropl f getc cs
 
   fun newToken ({source, current, line}, start, ty) =
-    { ty = ty
-    , lexeme = String.substring (source, start, current - start)
-    , line = line
-    }
+    {ty = ty, lexeme = substr (source, start, current), line = line}
 
-  fun scanToken (cs as {current = start, line, ...}) =
+  val keywordType =
+    fn "and" => T.AND
+     | "class" => T.CLASS
+     | "else" => T.ELSE
+     | "false" => T.FALSE
+     | "for" => T.FOR
+     | "fun" => T.FUN
+     | "if" => T.FUN
+     | "nil" => T.NIL
+     | "or" => T.OR
+     | "print" => T.PRINT
+     | "return" => T.RETURN
+     | "super" => T.SUPER
+     | "this" => T.THIS
+     | "true" => T.TRUE
+     | "var" => T.VAR
+     | "while" => T.WHILE
+     | _ => T.IDENTIFIER
+
+  fun scanToken (cs as {source, current = start, line}) =
     let
       fun token (cs, ty) =
         SOME (newToken (cs, start, ty), cs)
@@ -35,38 +61,36 @@ struct
             if c = expected then token (cs', ok) else token (cs, fail)
         | _ => token (cs, fail)
 
-      fun comment cs =
+      fun slash cs =
         case getc cs of
-          SOME (c, cs') => if c = #"\n" then scanToken cs else comment cs'
-        | NONE => NONE
-
-      fun matchSlash cs =
-        case getc cs of
-          SOME (#"/", cs') => comment cs'
+          SOME (#"/", cs') => scanToken (dropl (fn c => c <> #"\n") cs')
         | _ => token (cs, T.SLASH)
 
-      fun string (cs as {source, current, line}, len) =
+      fun string cs =
         case getc cs of
           SOME (#"\"", cs') =>
-            let val s = String.substring (source, current - len, len)
-            in token (cs', T.STRING s)
-            end
-        | SOME (c, cs') =>
-            string (if c = #"\n" then incLine cs' else cs', len + 1)
-        | NONE => (Error.error (line, "Unterminated string."); NONE)
+            token (cs', T.STRING (substr (source, start + 1, #current cs)))
+        | SOME (_, cs') => string cs'
+        | NONE => (Error.error (#line cs, "Unterminated string."); NONE)
 
-      (* TODO: test this, can we use dropl elsewhere? *)
-      fun number (cs as {source, current, ...}) =
+      fun number cs =
         let
-          val cs = StringCvt.dropl Char.isDigit getc cs
-          val cs as {current = next, ...} =
-            case getc cs of
-              SOME (#".", cs') => StringCvt.dropl Char.isDigit getc cs'
-            | _ => cs
-          val n = valOf (Real.fromString (String.substring
-            (source, current - 1, next - (current - 1))))
+          val csInt = dropl Char.isDigit cs
+          val cs =
+            case getc csInt of
+              SOME (#".", csDot) =>
+                let val csFrac = dropl Char.isDigit csDot
+                in if #current csDot = #current csFrac then csInt else csFrac
+                end
+            | _ => csInt
+          val n = valOf (Real.fromString (substr (source, start, #current cs)))
         in
           token (cs, T.NUMBER n)
+        end
+
+      fun identifier cs =
+        let val cs = dropl (fn c => Char.isAlphaNum c orelse c = #"_") cs
+        in token (cs, keywordType (substr (source, start, #current cs)))
         end
 
       val scan =
@@ -84,15 +108,17 @@ struct
          | (#"=", cs) => match (cs, #"=", T.EQUAL_EQUAL, T.EQUAL)
          | (#"<", cs) => match (cs, #"=", T.LESS_EQUAL, T.LESS)
          | (#">", cs) => match (cs, #"=", T.GREATER_EQUAL, T.GREATER)
-         | (#"/", cs) => matchSlash cs
+         | (#"/", cs) => slash cs
          | (#" ", cs) => scanToken cs
          | (#"\r", cs) => scanToken cs
          | (#"\t", cs) => scanToken cs
-         | (#"\n", cs) => scanToken (incLine cs)
-         | (#"\"", cs) => string (cs, 0)
+         | (#"\n", cs) => scanToken cs
+         | (#"\"", cs) => string cs
          | (c, cs) =>
           if Char.isDigit c then
             number cs
+          else if Char.isAlpha c then
+            identifier cs
           else
             (Error.error (line, "Unexpected character: " ^ str c); scanToken cs)
     in
@@ -101,9 +127,9 @@ struct
 
   fun scanTokens source =
     let
-      fun scan (l, cs as {line, ...}) =
+      fun scan (l, cs) =
         case scanToken cs of
-          NONE => rev ({ty = Token.EOF, lexeme = "", line = line} :: l)
+          NONE => rev ({ty = Token.EOF, lexeme = "", line = #line cs} :: l)
         | SOME (t, cs) => scan (t :: l, cs)
     in
       scan ([], {source = source, current = 0, line = 1})

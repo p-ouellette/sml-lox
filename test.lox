@@ -1,8 +1,13 @@
-// comment
-(( )){} // grouping stuff
-!*+-/=<> <= == // operators
-% // fail
+(){}
+!*+-/=<> <= ==
+% // 3: unexpected character
 "hi
 this is a string"
 ""
-"
+59.56
+.99.
+foobar
+foo_123
+11foo
+for and class
+" // 13: unterminated string

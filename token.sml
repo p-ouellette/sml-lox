@@ -22,7 +22,7 @@ sig
   | LESS
   | LESS_EQUAL
 
-  | IDENTIFIER of string
+  | IDENTIFIER
   | STRING of string
   | NUMBER of real
 
@@ -73,7 +73,7 @@ struct
   | LESS
   | LESS_EQUAL
 
-  | IDENTIFIER of string
+  | IDENTIFIER
   | STRING of string
   | NUMBER of real
 
@@ -118,7 +118,7 @@ struct
      | GREATER_EQUAL => "GREATER_EQUAL"
      | LESS => "LESS"
      | LESS_EQUAL => "LESS_EQUAL"
-     | IDENTIFIER id => "IDENTIFIER " ^ id
+     | IDENTIFIER => "IDENTIFIER"
      | STRING s => "STRING " ^ s
      | NUMBER n => "NUMBER " ^ Real.toString n
      | AND => "AND"

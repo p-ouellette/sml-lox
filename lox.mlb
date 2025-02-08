@@ -1,6 +1,8 @@
 $(SML_LIB)/basis/basis.mlb
-error.sml
 token.sml
+error.sml
 scanner.sml
+expr.sml
+parser.sml
 lox.sml
 call-main.sml

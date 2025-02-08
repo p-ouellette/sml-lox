@@ -1,6 +1,6 @@
 structure Scanner:
 sig
-  val scanTokens: string -> Token.t list
+  val scanTokens: string -> SourceToken.t list
 end =
 struct
   structure T = Token
@@ -28,8 +28,8 @@ struct
   fun dropl f cs =
     StringCvt.dropl f getc cs
 
-  fun newToken ({source, current, line}, start, ty) =
-    {ty = ty, lexeme = substr (source, start, current), line = line}
+  fun newToken ({source, current, line}, start, token) =
+    {token = token, lexeme = substr (source, start, current), line = line}
 
   val keywordType =
     fn "and" => T.AND
@@ -61,7 +61,7 @@ struct
             if c = expected then token (cs', ok) else token (cs, fail)
         | _ => token (cs, fail)
 
-      fun slash cs =
+      fun slashOrComment cs =
         case getc cs of
           SOME (#"/", cs') => scanToken (dropl (fn c => c <> #"\n") cs')
         | _ => token (cs, T.SLASH)
@@ -108,7 +108,7 @@ struct
          | (#"=", cs) => match (cs, #"=", T.EQUAL_EQUAL, T.EQUAL)
          | (#"<", cs) => match (cs, #"=", T.LESS_EQUAL, T.LESS)
          | (#">", cs) => match (cs, #"=", T.GREATER_EQUAL, T.GREATER)
-         | (#"/", cs) => slash cs
+         | (#"/", cs) => slashOrComment cs
          | (#" ", cs) => scanToken cs
          | (#"\r", cs) => scanToken cs
          | (#"\t", cs) => scanToken cs
@@ -129,7 +129,7 @@ struct
     let
       fun scan (l, cs) =
         case scanToken cs of
-          NONE => rev ({ty = Token.EOF, lexeme = "", line = #line cs} :: l)
+          NONE => rev ({token = Token.EOF, lexeme = "", line = #line cs} :: l)
         | SOME (t, cs) => scan (t :: l, cs)
     in
       scan ([], {source = source, current = 0, line = 1})

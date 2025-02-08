@@ -9,9 +9,13 @@ struct
   structure TIO = TextIO
 
   fun run prog =
-    let val tokens = Scanner.scanTokens prog
-    in app (fn t => print (Token.toString t ^ "\n")) tokens
+    let
+      val tokens = Scanner.scanTokens prog
+      val expression = Parser.parse tokens
+    in
+      ignore expression
     end
+    handle Parser.Error => ()
 
   fun runFile fname =
     let

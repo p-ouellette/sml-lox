@@ -2,6 +2,8 @@ structure Error:
 sig
   val hadError: bool ref
 
+  val errorAt: SourceToken.t * string -> unit
+
   val error: int * string -> unit
 end =
 struct
@@ -16,4 +18,9 @@ struct
     )
 
   fun error (line, msg) = report (line, "", msg)
+
+  fun errorAt ({token = Token.EOF, line, lexeme = _}, msg) =
+        report (line, " at end", msg)
+    | errorAt ({line, lexeme, ...}, msg) =
+        report (line, " at '" ^ lexeme ^ "'", msg)
 end

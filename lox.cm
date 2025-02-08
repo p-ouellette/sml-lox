@@ -4,4 +4,6 @@ $/basis.cm
 error.sml
 token.sml
 scanner.sml
+expr.sml
+parser.sml
 lox.sml

@@ -1,6 +1,6 @@
 structure Token:
 sig
-  datatype ty =
+  datatype t =
     LEFT_PAREN
   | RIGHT_PAREN
   | LEFT_BRACE
@@ -45,13 +45,12 @@ sig
 
   | EOF
 
-  type t = {ty: ty, lexeme: string, line: int}
+  val sameType: t * t -> bool
 
-  val tyToString: ty -> string
   val toString: t -> string
 end =
 struct
-  datatype ty =
+  datatype t =
     LEFT_PAREN
   | RIGHT_PAREN
   | LEFT_BRACE
@@ -96,9 +95,49 @@ struct
 
   | EOF
 
-  type t = {ty: ty, lexeme: string, line: int}
+  val sameType =
+    fn (LEFT_PAREN, LEFT_PAREN) => true
+     | (RIGHT_PAREN, RIGHT_PAREN) => true
+     | (LEFT_BRACE, LEFT_BRACE) => true
+     | (RIGHT_BRACE, RIGHT_BRACE) => true
+     | (COMMA, COMMA) => true
+     | (DOT, DOT) => true
+     | (MINUS, MINUS) => true
+     | (PLUS, PLUS) => true
+     | (SEMICOLON, SEMICOLON) => true
+     | (SLASH, SLASH) => true
+     | (STAR, STAR) => true
+     | (BANG, BANG) => true
+     | (BANG_EQUAL, BANG_EQUAL) => true
+     | (EQUAL, EQUAL) => true
+     | (EQUAL_EQUAL, EQUAL_EQUAL) => true
+     | (GREATER, GREATER) => true
+     | (GREATER_EQUAL, GREATER_EQUAL) => true
+     | (LESS, LESS) => true
+     | (LESS_EQUAL, LESS_EQUAL) => true
+     | (IDENTIFIER, IDENTIFIER) => true
+     | (STRING _, STRING _) => true
+     | (NUMBER _, NUMBER _) => true
+     | (AND, AND) => true
+     | (CLASS, CLASS) => true
+     | (ELSE, ELSE) => true
+     | (FALSE, FALSE) => true
+     | (FUN, FUN) => true
+     | (FOR, FOR) => true
+     | (IF, IF) => true
+     | (NIL, NIL) => true
+     | (OR, OR) => true
+     | (PRINT, PRINT) => true
+     | (RETURN, RETURN) => true
+     | (SUPER, SUPER) => true
+     | (THIS, THIS) => true
+     | (TRUE, TRUE) => true
+     | (VAR, VAR) => true
+     | (WHILE, WHILE) => true
+     | (EOF, EOF) => true
+     | _ => false
 
-  val tyToString =
+  val toString =
     fn LEFT_PAREN => "LEFT_PAREN"
      | RIGHT_PAREN => "RIGHT_PAREN"
      | LEFT_BRACE => "LEFT_BRACE"
@@ -138,7 +177,17 @@ struct
      | VAR => "VAR"
      | WHILE => "WHILE"
      | EOF => "EOF"
+end
 
-  fun toString {ty, lexeme, line = _} =
-    tyToString ty ^ " " ^ lexeme
+structure SourceToken:
+sig
+  type t = {token: Token.t, lexeme: string, line: int}
+
+  val toString: t -> string
+end =
+struct
+  type t = {token: Token.t, lexeme: string, line: int}
+
+  fun toString {token, lexeme, line = _} =
+    Token.toString token ^ " " ^ lexeme
 end

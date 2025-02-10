@@ -13,7 +13,7 @@ struct
       val tokens = Scanner.scanTokens prog
       val expression = Parser.parse tokens
     in
-      ignore expression
+      Interpreter.interpret expression
     end
     handle Error.ParserError => ()
 
@@ -24,7 +24,8 @@ struct
     in
       TIO.closeIn strm;
       run prog;
-      if ! Error.hadError then OS.Process.failure else OS.Process.success
+      if ! Error.hadError orelse ! Error.hadRuntimeError then OS.Process.failure
+      else OS.Process.success
     end
 
   fun runPrompt () =

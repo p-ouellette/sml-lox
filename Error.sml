@@ -4,21 +4,23 @@ sig
   exception RuntimeError of SourceToken.t * string
 
   val hadError: bool ref
-
-  val errorAt: SourceToken.t * string -> unit
+  val hadRuntimeError: bool ref
 
   val error: int * string -> unit
+  val errorAt: SourceToken.t * string -> unit
+  val runtimeError: SourceToken.t * string -> unit
 end =
 struct
-  structure TIO = TextIO
-
   exception ParserError
   exception RuntimeError of SourceToken.t * string
 
   val hadError = ref false
+  val hadRuntimeError = ref false
+
+  fun sayErr s = TextIO.output (TextIO.stdErr, s)
 
   fun report (line, where_, msg) =
-    ( app (fn s => TIO.output (TIO.stdErr, s))
+    ( app sayErr
         ["[line ", Int.toString line, "] Error", where_, ": ", msg, "\n"]
     ; hadError := true
     )
@@ -29,4 +31,9 @@ struct
         report (line, " at end", msg)
     | errorAt ({line, lexeme, ...}, msg) =
         report (line, " at '" ^ lexeme ^ "'", msg)
+
+  fun runtimeError ({line, ...}: SourceToken.t, msg) =
+    ( app sayErr [msg, "\n[line ", Int.toString line, "]\n"]
+    ; hadRuntimeError := true
+    )
 end

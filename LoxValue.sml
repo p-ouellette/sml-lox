@@ -1,13 +1,20 @@
-structure LoxValue =
-struct
-  datatype t = String of string | Number of real | Boolean of bool | Nil
+structure LoxValue:
+sig
+  datatype t = Nil | Boolean of bool | Number of real | String of string
 
-  fun isTruthy (Boolean false) = false
-    | isTruthy Nil = false
+  val isTruthy: t -> bool
+
+  val toString: t -> string
+end =
+struct
+  datatype t = Nil | Boolean of bool | Number of real | String of string
+
+  fun isTruthy Nil = false
+    | isTruthy (Boolean false) = false
     | isTruthy _ = true
 
-  fun toString (String s) = s
-    | toString (Number n) = Real.toString n
+  fun toString Nil = "nil"
     | toString (Boolean b) = Bool.toString b
-    | toString Nil = "nil"
+    | toString (Number n) = Real.toString n
+    | toString (String s) = s
 end

@@ -1,8 +1,8 @@
 structure Expr:
 sig
   datatype t =
-    Unary of Token.t * t
-  | Binary of t * Token.t * t
+    Unary of SourceToken.t * t
+  | Binary of t * SourceToken.t * t
   | Grouping of t
   | String of string
   | Number of real
@@ -11,8 +11,8 @@ sig
 end =
 struct
   datatype t =
-    Unary of Token.t * t
-  | Binary of t * Token.t * t
+    Unary of SourceToken.t * t
+  | Binary of t * SourceToken.t * t
   | Grouping of t
   | String of string
   | Number of real

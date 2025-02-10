@@ -1,5 +1,8 @@
 structure Error:
 sig
+  exception ParserError
+  exception RuntimeError of SourceToken.t * string
+
   val hadError: bool ref
 
   val errorAt: SourceToken.t * string -> unit
@@ -8,6 +11,9 @@ sig
 end =
 struct
   structure TIO = TextIO
+
+  exception ParserError
+  exception RuntimeError of SourceToken.t * string
 
   val hadError = ref false
 

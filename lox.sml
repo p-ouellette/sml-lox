@@ -15,7 +15,7 @@ struct
     in
       ignore expression
     end
-    handle Parser.Error => ()
+    handle Error.ParserError => ()
 
   fun runFile fname =
     let

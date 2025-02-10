@@ -1,33 +1,29 @@
 structure Parser:
 sig
-  exception Error
-
   val parse: SourceToken.t list -> Expr.t
 end =
 struct
   structure T = Token
 
-  exception Error
-
   fun error (st, msg) =
-    (Error.errorAt (st, msg); Error)
+    (Error.errorAt (st, msg); Error.ParserError)
 
   fun advance ([]: SourceToken.t list) = raise Fail "no more tokens"
     | advance (st :: sts) = (st, sts)
 
   fun match (tokens, sts) =
     let
-      val ({token, ...}, sts') = advance sts
+      val (st, sts') = advance sts
     in
-      if List.exists (fn t => Token.sameType (t, token)) tokens then
-        SOME (token, sts')
+      if List.exists (fn t => Token.sameType (t, #token st)) tokens then
+        SOME (st, sts')
       else
         NONE
     end
 
   fun consume (token, msg) sts =
-    let val r as (st as {token = t, ...}, _) = advance sts
-    in if Token.sameType (token, t) then r else raise error (st, msg)
+    let val r as (st, _) = advance sts
+    in if Token.sameType (token, #token st) then r else raise error (st, msg)
     end
 
   fun syncronize sts =
@@ -91,9 +87,9 @@ struct
   (* primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" *)
   and primary sts =
     let
-      val (st as {token, ...}, sts) = advance sts
+      val (st, sts) = advance sts
     in
-      case token of
+      case #token st of
         T.FALSE => (Expr.Boolean false, sts)
       | T.TRUE => (Expr.Boolean true, sts)
       | T.NIL => (Expr.Nil, sts)

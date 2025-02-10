@@ -1,10 +1,12 @@
 Group is
 
 $/basis.cm
-token.sml
-error.sml
-scanner.sml
-expr.sml
-parser.sml
-interpreter.sml
-lox.sml
+Token.sml
+SourceToken.sml
+Error.sml
+Scanner.sml
+Expr.sml
+Parser.sml
+LoxValue.sml
+Interpreter.sml
+Lox.sml

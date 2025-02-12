@@ -1,6 +1,6 @@
 structure Interpreter:
 sig
-  val interpret: Expr.t -> unit
+  val interpret: Stmt.t list -> unit
 end =
 struct
   structure T = Token
@@ -14,15 +14,20 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun evaluate Expr.Nil = LV.Nil
+  fun execute (Stmt.Expression expr) =
+        ignore (evaluate expr)
+    | execute (Stmt.Print expr) =
+        print (LV.toString (evaluate expr) ^ "\n")
+
+  and evaluate Expr.Nil = LV.Nil
     | evaluate (Expr.Boolean b) = LV.Boolean b
     | evaluate (Expr.Number n) = LV.Number n
     | evaluate (Expr.String s) = LV.String s
     | evaluate (Expr.Grouping expr) = evaluate expr
-    | evaluate (Expr.Unary x) = evalUnaryExpr x
-    | evaluate (Expr.Binary x) = evalBinaryExpr x
+    | evaluate (Expr.Unary x) = unaryExpr x
+    | evaluate (Expr.Binary x) = binaryExpr x
 
-  and evalUnaryExpr (operator, right) =
+  and unaryExpr (operator, right) =
     let
       val right = evaluate right
     in
@@ -32,7 +37,7 @@ struct
       | _ => raise Fail "impossible"
     end
 
-  and evalBinaryExpr (left, operator, right) =
+  and binaryExpr (left, operator, right) =
     let
       val left = evaluate left
       val right = evaluate right
@@ -51,7 +56,7 @@ struct
       | _ => raise Fail "impossible"
     end
 
-  fun interpret expr =
-    print (LV.toString (evaluate expr) ^ "\n")
+  fun interpret statements =
+    app execute statements
     handle Error.RuntimeError err => Error.runtimeError err
 end

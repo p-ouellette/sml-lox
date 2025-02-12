@@ -6,6 +6,7 @@ SourceToken.sml
 Error.sml
 Scanner.sml
 Expr.sml
+Stmt.sml
 Parser.sml
 LoxValue.sml
 Interpreter.sml

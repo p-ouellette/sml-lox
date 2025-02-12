@@ -6,6 +6,12 @@ Interpreters_.
 The interpreter can build using MLton or PolyMLB (see `Makefile`).
 Use `sml -m lox.cm` to load it into the SML/NJ REPL.
 
-# TODO
+## Status
 
-- run author's test suite
+Currently passes the [test suite][test-suite] for chapter 7.
+
+## TODO
+
+- get rid of eof token?
+
+[test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

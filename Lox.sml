@@ -11,9 +11,9 @@ struct
   fun run prog =
     let
       val tokens = Scanner.scanTokens prog
-      val expression = Parser.parse tokens
+      val statements = Parser.parse tokens
     in
-      Interpreter.interpret expression
+      Interpreter.interpret statements
     end
     handle Error.ParserError => ()
 

@@ -1,6 +1,6 @@
 structure Parser:
 sig
-  val parse: SourceToken.t list -> Expr.t
+  val parse: SourceToken.t list -> Stmt.t list
 end =
 struct
   structure T = Token
@@ -61,7 +61,40 @@ struct
       (expr, sts)
     end
 
-  fun expression sts = equality sts
+  (* program -> statement* EOF *)
+  fun program (stmts, sts) =
+    case advance sts of
+      ({token = T.EOF, ...}, _) => rev stmts
+    | _ =>
+        let val (stmt, sts') = statement sts
+        in program (stmt :: stmts, sts')
+        end
+
+  (* statement -> exprStmt | printStmt *)
+  and statement sts =
+    case match ([T.PRINT], sts) of
+      SOME (_, sts') => printStatement sts'
+    | NONE => expressionStatement sts
+
+  (* printStmt -> "print" expression ";" *)
+  and printStatement sts =
+    let
+      val (value, sts) = expression sts
+      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after value.") sts
+    in
+      (Stmt.Print value, sts)
+    end
+
+  (* exprStmt -> expression ";" *)
+  and expressionStatement sts =
+    let
+      val (expr, sts) = expression sts
+      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after expression.") sts
+    in
+      (Stmt.Expression expr, sts)
+    end
+
+  and expression sts = equality sts
 
   and equality sts =
     binary ([T.BANG_EQUAL, T.EQUAL_EQUAL], comparison) sts
@@ -106,8 +139,5 @@ struct
       | _ => raise error (st, "Expect expression.")
     end
 
-  fun parse sts =
-    let val (expr, _) = expression sts
-    in expr
-    end
+  fun parse sts = program ([], sts)
 end

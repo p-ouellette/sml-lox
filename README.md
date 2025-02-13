@@ -13,5 +13,8 @@ Currently passes the [test suite][test-suite] for chapter 7.
 ## TODO
 
 - get rid of eof token?
+- should RuntimeException propagate the environment to preserve changes before
+  the error?
+- grep for XXX comments
 
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

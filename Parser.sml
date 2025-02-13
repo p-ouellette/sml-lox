@@ -5,8 +5,8 @@ end =
 struct
   structure T = Token
 
-  fun error (st, msg) =
-    (Error.errorAt (st, msg); Error.ParserError)
+  fun error (st, msg, sts) =
+    (Error.errorAt (st, msg); Error.ParserError sts)
 
   fun advance ([]: SourceToken.t list) = raise Fail "no more tokens"
     | advance (st :: sts) = (st, sts)
@@ -22,8 +22,11 @@ struct
     end
 
   fun consume (token, msg) sts =
-    let val r as (st, _) = advance sts
-    in if Token.sameType (token, #token st) then r else raise error (st, msg)
+    let
+      val r as (st, _) = advance sts
+    in
+      if Token.sameType (token, #token st) then r
+      else raise error (st, msg, sts)
     end
 
   fun syncronize sts =
@@ -85,7 +88,7 @@ struct
          in (SOME dec, sts')
          end
      | NONE => let val (stmt, sts') = statement sts in (SOME stmt, sts') end)
-    handle Error.ParserError => (NONE, syncronize sts)
+    handle Error.ParserError sts' => (NONE, syncronize sts')
 
   (* varDecl -> "var" IDENTIFIER ( "=" expression )? ";" *)
   and varDeclaration sts =
@@ -151,24 +154,24 @@ struct
   (* primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" *)
   and primary sts =
     let
-      val (st, sts) = advance sts
+      val (st, sts') = advance sts
     in
       case #token st of
-        T.FALSE => (Expr.Boolean false, sts)
-      | T.TRUE => (Expr.Boolean true, sts)
-      | T.NIL => (Expr.Nil, sts)
-      | T.NUMBER n => (Expr.Number n, sts)
-      | T.STRING s => (Expr.String s, sts)
-      | T.IDENTIFIER => (Expr.Variable st, sts)
+        T.FALSE => (Expr.Boolean false, sts')
+      | T.TRUE => (Expr.Boolean true, sts')
+      | T.NIL => (Expr.Nil, sts')
+      | T.NUMBER n => (Expr.Number n, sts')
+      | T.STRING s => (Expr.String s, sts')
+      | T.IDENTIFIER => (Expr.Variable st, sts')
       | T.LEFT_PAREN =>
           let
-            val (expr, sts) = expression sts
-            val (_, sts) =
-              consume (T.RIGHT_PAREN, "Expect ')' after expression.") sts
+            val (expr, sts') = expression sts'
+            val (_, sts') =
+              consume (T.RIGHT_PAREN, "Expect ')' after expression.") sts'
           in
-            (Expr.Grouping expr, sts)
+            (Expr.Grouping expr, sts')
           end
-      | _ => raise error (st, "Expect expression.")
+      | _ => raise error (st, "Expect expression.", sts)
     end
 
   fun parse sts = program ([], sts)

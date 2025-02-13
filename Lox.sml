@@ -15,7 +15,7 @@ struct
     in
       Interpreter.interpret (statements, env)
     end
-    handle Error.ParserError => env
+    handle Error.ParserError _ => env
 
   fun runFile fname =
     let

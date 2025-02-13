@@ -1,6 +1,8 @@
 structure Error:
 sig
-  exception ParserError
+  (* holds the unconsumed input *)
+  exception ParserError of SourceToken.t list
+  (* holds the token where the error occurred and an error message *)
   exception RuntimeError of SourceToken.t * string
 
   val hadError: bool ref
@@ -11,7 +13,7 @@ sig
   val runtimeError: SourceToken.t * string -> unit
 end =
 struct
-  exception ParserError
+  exception ParserError of SourceToken.t list
   exception RuntimeError of SourceToken.t * string
 
   val hadError = ref false

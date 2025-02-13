@@ -3,7 +3,6 @@ sig
   datatype t = Nil | Boolean of bool | Number of real | String of string
 
   val isTruthy: t -> bool
-
   val toString: t -> string
 end =
 struct

@@ -61,14 +61,45 @@ struct
       (expr, sts)
     end
 
-  (* program -> statement* EOF *)
-  fun program (stmts, sts) =
+  (* program -> declaration* EOF *)
+  fun program (decs, sts) =
     case advance sts of
-      ({token = T.EOF, ...}, _) => rev stmts
+      ({token = T.EOF, ...}, _) => rev decs
     | _ =>
-        let val (stmt, sts') = statement sts
-        in program (stmt :: stmts, sts')
+        (* XXX: handle ParserError here instead of in declaration? *)
+        let
+          val (dec, sts') = declaration sts
+          val decs =
+            case dec of
+              SOME dec => dec :: decs
+            | NONE => decs
+        in
+          program (decs, sts')
         end
+
+  (* declaration -> varDecl | statement *)
+  and declaration sts =
+    (case match ([T.VAR], sts) of
+       SOME (_, sts') =>
+         let val (dec, sts') = varDeclaration sts'
+         in (SOME dec, sts')
+         end
+     | NONE => let val (stmt, sts') = statement sts in (SOME stmt, sts') end)
+    handle Error.ParserError => (NONE, syncronize sts)
+
+  (* varDecl -> "var" IDENTIFIER ( "=" expression )? ";" *)
+  and varDeclaration sts =
+    let
+      val (name, sts) = consume (T.IDENTIFIER, "Expect variable name.") sts
+      val (initializer, sts) =
+        case match ([T.EQUAL], sts) of
+          SOME (_, sts') => expression sts'
+        | NONE => (Expr.Nil, sts)
+      val (_, sts) =
+        consume (T.SEMICOLON, "Expect ';' after variable declaration.") sts
+    in
+      (Stmt.Var (name, initializer), sts)
+    end
 
   (* statement -> exprStmt | printStmt *)
   and statement sts =
@@ -128,6 +159,7 @@ struct
       | T.NIL => (Expr.Nil, sts)
       | T.NUMBER n => (Expr.Number n, sts)
       | T.STRING s => (Expr.String s, sts)
+      | T.IDENTIFIER => (Expr.Variable st, sts)
       | T.LEFT_PAREN =>
           let
             val (expr, sts) = expression sts

@@ -1,6 +1,6 @@
 structure Lox:
 sig
-  val run: string -> unit
+  val run: string * Environment.t -> Environment.t
   val runFile: string -> OS.Process.status
   val runPrompt: unit -> OS.Process.status
   val main: string list -> OS.Process.status
@@ -8,14 +8,14 @@ end =
 struct
   structure TIO = TextIO
 
-  fun run prog =
+  fun run (prog, env) =
     let
       val tokens = Scanner.scanTokens prog
       val statements = Parser.parse tokens
     in
-      Interpreter.interpret statements
+      Interpreter.interpret (statements, env)
     end
-    handle Error.ParserError => ()
+    handle Error.ParserError => env
 
   fun runFile fname =
     let
@@ -23,17 +23,27 @@ struct
       val prog = TIO.inputAll strm
     in
       TIO.closeIn strm;
-      run prog;
+      run (prog, Environment.empty);
       if ! Error.hadError orelse ! Error.hadRuntimeError then OS.Process.failure
       else OS.Process.success
     end
 
   fun runPrompt () =
-    ( print "> "
-    ; case TIO.inputLine TIO.stdIn of
-        NONE => (print "\n"; OS.Process.success)
-      | SOME s => (run s; Error.hadError := false; runPrompt ())
-    )
+    let
+      fun loop env =
+        ( print "> "
+        ; case TIO.inputLine TIO.stdIn of
+            NONE => (print "\n"; OS.Process.success)
+          | SOME s =>
+              let val env' = run (s, env)
+              (* XXX: resetting hadError is pointless because we don't
+               * check it in run *)
+              in Error.hadError := false; loop env'
+              end
+        )
+    in
+      loop Environment.empty
+    end
 
   fun main [] = runPrompt ()
     | main [fname] = runFile fname

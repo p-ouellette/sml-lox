@@ -1,4 +1,5 @@
 $(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
 Token.sml
 SourceToken.sml
 Error.sml
@@ -7,6 +8,7 @@ Expr.sml
 Stmt.sml
 Parser.sml
 LoxValue.sml
+Environment.sml
 Interpreter.sml
 Lox.sml
 ann "poly:discard" in

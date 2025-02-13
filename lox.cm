@@ -1,6 +1,7 @@
 Group is
 
 $/basis.cm
+$/smlnj-lib.cm
 Token.sml
 SourceToken.sml
 Error.sml
@@ -9,5 +10,6 @@ Expr.sml
 Stmt.sml
 Parser.sml
 LoxValue.sml
+Environment.sml
 Interpreter.sml
 Lox.sml

@@ -1,10 +1,11 @@
 structure Interpreter:
 sig
-  val interpret: Stmt.t list -> unit
+  val interpret: Stmt.t list * Environment.t -> Environment.t
 end =
 struct
   structure T = Token
   structure LV = LoxValue
+  structure Env = Environment
 
   fun numberOperand (_, LV.Number n) = n
     | numberOperand (operator, _) =
@@ -14,22 +15,30 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Expression expr) =
-        ignore (evaluate expr)
-    | execute (Stmt.Print expr) =
-        print (LV.toString (evaluate expr) ^ "\n")
+  fun execute (Stmt.Expression expr, env) =
+        (evaluate (env, expr); env)
+    | execute (Stmt.Print expr, env) =
+        (print (LV.toString (evaluate (env, expr)) ^ "\n"); env)
+    | execute (Stmt.Var ({lexeme, ...}, init), env) =
+        Env.define (env, lexeme, evaluate (env, init))
 
-  and evaluate Expr.Nil = LV.Nil
-    | evaluate (Expr.Boolean b) = LV.Boolean b
-    | evaluate (Expr.Number n) = LV.Number n
-    | evaluate (Expr.String s) = LV.String s
-    | evaluate (Expr.Grouping expr) = evaluate expr
-    | evaluate (Expr.Unary x) = unaryExpr x
-    | evaluate (Expr.Binary x) = binaryExpr x
-
-  and unaryExpr (operator, right) =
+  and evaluate (env, expr) =
     let
-      val right = evaluate right
+      fun eval Expr.Nil = LV.Nil
+        | eval (Expr.Boolean b) = LV.Boolean b
+        | eval (Expr.Number n) = LV.Number n
+        | eval (Expr.String s) = LV.String s
+        | eval (Expr.Variable name) = Env.get (env, name)
+        | eval (Expr.Grouping expr) = evaluate (env, expr)
+        | eval (Expr.Unary x) = unaryExpr x env
+        | eval (Expr.Binary x) = binaryExpr x env
+    in
+      eval expr
+    end
+
+  and unaryExpr (operator, right) env =
+    let
+      val right = evaluate (env, right)
     in
       case #token operator of
         T.MINUS => LV.Number (~(numberOperand (operator, right)))
@@ -37,10 +46,10 @@ struct
       | _ => raise Fail "impossible"
     end
 
-  and binaryExpr (left, operator, right) =
+  and binaryExpr (left, operator, right) env =
     let
-      val left = evaluate left
-      val right = evaluate right
+      val left = evaluate (env, left)
+      val right = evaluate (env, right)
     in
       case #token operator of
         T.MINUS => LV.Number (op- (numberOperands (operator, left, right)))
@@ -56,7 +65,7 @@ struct
       | _ => raise Fail "impossible"
     end
 
-  fun interpret statements =
-    app execute statements
-    handle Error.RuntimeError err => Error.runtimeError err
+  fun interpret (statements, env) =
+    foldl execute env statements
+    handle Error.RuntimeError err => (Error.runtimeError err; env)
 end

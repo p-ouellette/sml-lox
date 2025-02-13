@@ -50,6 +50,3 @@ struct
     | main _ =
         (print "Usage: lox [script]"; OS.Process.failure)
 end
-
-fun main () =
-  OS.Process.exit (Lox.main (CommandLine.arguments ()))

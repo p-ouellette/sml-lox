@@ -1,1 +1,1 @@
-val _ = main ()
+val _ = OS.Process.exit (Lox.main (CommandLine.arguments ()))

@@ -15,6 +15,7 @@ Currently passes the [test suite][test-suite] for chapter 7.
 - get rid of eof token?
 - should RuntimeException propagate the environment to preserve changes before
   the error?
+- print expressions in REPL
 - grep for XXX comments
 
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

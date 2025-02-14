@@ -21,6 +21,9 @@ struct
         NONE
     end
 
+  fun check (tokens, sts) =
+    Option.isSome (match (tokens, sts))
+
   fun consume (token, msg) sts =
     let
       val r as (st, _) = advance sts
@@ -66,19 +69,19 @@ struct
 
   (* program -> declaration* EOF *)
   fun program (decs, sts) =
-    case advance sts of
-      ({token = T.EOF, ...}, _) => rev decs
-    | _ =>
-        (* XXX: handle ParserError here instead of in declaration? *)
-        let
-          val (dec, sts') = declaration sts
-          val decs =
-            case dec of
-              SOME dec => dec :: decs
-            | NONE => decs
-        in
-          program (decs, sts')
-        end
+    if check ([T.EOF], sts) then
+      rev decs
+    else
+      (* XXX: handle ParserError here instead of in declaration? *)
+      let
+        val (dec, sts') = declaration sts
+        val decs =
+          case dec of
+            SOME dec => dec :: decs
+          | NONE => decs
+      in
+        program (decs, sts')
+      end
 
   (* declaration -> varDecl | statement *)
   and declaration sts =
@@ -104,11 +107,26 @@ struct
       (Stmt.Var (name, initializer), sts)
     end
 
-  (* statement -> exprStmt | printStmt *)
+  (* statement -> exprStmt | printStmt | block *)
   and statement sts =
     case match ([T.PRINT], sts) of
       SOME (_, sts') => printStatement sts'
-    | NONE => expressionStatement sts
+    | NONE =>
+        (case match ([T.LEFT_BRACE], sts) of
+           SOME (_, sts') =>
+             let val (decs, sts') = block ([], sts')
+             in (Stmt.Block decs, sts')
+             end
+         | NONE => expressionStatement sts)
+
+  (* exprStmt -> expression ";" *)
+  and expressionStatement sts =
+    let
+      val (expr, sts) = expression sts
+      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after expression.") sts
+    in
+      (Stmt.Expression expr, sts)
+    end
 
   (* printStmt -> "print" expression ";" *)
   and printStatement sts =
@@ -119,14 +137,23 @@ struct
       (Stmt.Print value, sts)
     end
 
-  (* exprStmt -> expression ";" *)
-  and expressionStatement sts =
-    let
-      val (expr, sts) = expression sts
-      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after expression.") sts
-    in
-      (Stmt.Expression expr, sts)
-    end
+  (* block -> "{" declaration* "}" *)
+  and block (decs, sts) =
+    if check ([T.RIGHT_BRACE, T.EOF], sts) then
+      let val (_, sts) = consume (T.RIGHT_BRACE, "Expect '}' after block.") sts
+      in (rev decs, sts)
+      end
+    else
+      let
+        val (dec, sts) = declaration sts
+        (* XXX: see program *)
+        val decs =
+          case dec of
+            SOME dec => dec :: decs
+          | NONE => decs
+      in
+        block (decs, sts)
+      end
 
   and expression sts = assignment sts
 

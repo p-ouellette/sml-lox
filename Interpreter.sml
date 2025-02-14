@@ -15,18 +15,20 @@ struct
     | numOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Expression expr, env) =
+  fun execute (Stmt.Var ({lexeme, ...}, init), env) =
+        let val (value, env) = evaluate (init, env)
+        in Env.define (env, lexeme, value)
+        end
+    | execute (Stmt.Expression expr, env) =
         #2 (evaluate (expr, env))
     | execute (Stmt.Print expr, env) =
         let val (value, env) = evaluate (expr, env)
         in (print (LV.toString value ^ "\n"); env)
         end
-    | execute (Stmt.Var ({lexeme, ...}, init), env) =
-        let val (value, env: Env.t) = evaluate (init, env)
-        in Env.define (env, lexeme, value)
-        end
+    | execute (Stmt.Block stmts, env) =
+        (foldl execute env stmts; env)
 
-  and evaluate (expr, env: Env.t) =
+  and evaluate (expr, env) =
     let
       fun eval Expr.Nil = (LV.Nil, env)
         | eval (Expr.Boolean b) = (LV.Boolean b, env)

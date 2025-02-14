@@ -3,8 +3,8 @@
 This is an interpreter for the Lox language from the book _Crafting
 Interpreters_.
 
-The interpreter can build using MLton or PolyMLB (see `Makefile`).
-Use `sml -m lox.cm` to load it into the SML/NJ REPL.
+Run `make` to build the interpreter with MLton or use `sml -m lox.cm` to load it
+into the SML/NJ REPL.
 
 ## Status
 

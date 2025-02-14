@@ -36,8 +36,7 @@ struct
             NONE => (print "\n"; OS.Process.success)
           | SOME s =>
               let val env' = run (s, env)
-              (* XXX: resetting hadError is pointless because we don't
-               * check it in run *)
+              (* XXX: no need to reset hadError if we don't check it in run *)
               in Error.hadError := false; loop env'
               end
         )

@@ -128,7 +128,25 @@ struct
       (Stmt.Expression expr, sts)
     end
 
-  and expression sts = equality sts
+  and expression sts = assignment sts
+
+  (* assignment -> IDENTIFIER "=" assignment | equality *)
+  and assignment sts =
+    let
+      val (expr, sts) = equality sts
+    in
+      case match ([T.EQUAL], sts) of
+        SOME (equals, sts) =>
+          let
+            val (value, sts) = assignment sts
+          in
+            case expr of
+              Expr.Variable name => (Expr.Assign (name, value), sts)
+            | _ =>
+                (error (equals, "Invalid assignment target.", sts); (expr, sts))
+          end
+      | NONE => (expr, sts)
+    end
 
   and equality sts =
     binary ([T.BANG_EQUAL, T.EQUAL_EQUAL], comparison) sts

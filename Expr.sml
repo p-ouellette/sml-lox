@@ -9,6 +9,7 @@ sig
   | Grouping of t
   | Unary of SourceToken.t * t
   | Binary of t * SourceToken.t * t
+  | Assign of SourceToken.t * t
 end =
 struct
   datatype t =
@@ -20,4 +21,5 @@ struct
   | Grouping of t
   | Unary of SourceToken.t * t
   | Binary of t * SourceToken.t * t
+  | Assign of SourceToken.t * t
 end

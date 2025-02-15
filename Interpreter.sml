@@ -7,12 +7,12 @@ struct
   structure LV = LoxValue
   structure Env = Environment
 
-  fun numOperand (_, LV.Number n) = n
-    | numOperand (operator, _) =
+  fun numberOperand (_, LV.Number n) = n
+    | numberOperand (operator, _) =
         raise Error.RuntimeError (operator, "Operand must be a number.")
 
-  fun numOperands (_, LV.Number x, LV.Number y) = (x, y)
-    | numOperands (operator, _, _) =
+  fun numberOperands (_, LV.Number x, LV.Number y) = (x, y)
+    | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
   fun execute (Stmt.Var ({lexeme, ...}, init), env) =
@@ -52,20 +52,27 @@ struct
       val (right, env) = evaluate (right, env)
     in
       case #token operator of
-        T.MINUS => (LV.Number (~(numOperand (operator, right))), env)
+        T.MINUS => (LV.Number (~(numberOperand (operator, right))), env)
       | T.BANG => (LV.Boolean (not (LV.isTruthy right)), env)
-      | _ => raise Fail "impossible"
+      | _ => raise Fail "invalid unary operator"
     end
 
   and binaryExpr (left, operator, right) env =
     let
       val (left, env) = evaluate (left, env)
       val (right, env) = evaluate (right, env)
+      fun numOperands () = numberOperands (operator, left, right)
     in
       case #token operator of
-        T.MINUS => (LV.Number (op- (numOperands (operator, left, right))), env)
-      | T.SLASH => (LV.Number (op/ (numOperands (operator, left, right))), env)
-      | T.STAR => (LV.Number (op* (numOperands (operator, left, right))), env)
+        T.BANG_EQUAL => (LV.Boolean (not (LV.isEqual (left, right))), env)
+      | T.EQUAL_EQUAL => (LV.Boolean (LV.isEqual (left, right)), env)
+      | T.GREATER => (LV.Boolean (op> (numOperands ())), env)
+      | T.GREATER_EQUAL => (LV.Boolean (op>= (numOperands ())), env)
+      | T.LESS => (LV.Boolean (op< (numOperands ())), env)
+      | T.LESS_EQUAL => (LV.Boolean (op<= (numOperands ())), env)
+      | T.MINUS => (LV.Number (op- (numOperands ())), env)
+      | T.SLASH => (LV.Number (op/ (numOperands ())), env)
+      | T.STAR => (LV.Number (op* (numOperands ())), env)
       | T.PLUS =>
           (case (left, right) of
              (LV.Number x, LV.Number y) => (LV.Number (x + y), env)
@@ -73,7 +80,7 @@ struct
            | _ =>
                raise Error.RuntimeError
                  (operator, "Operands must be two numbers or two strings."))
-      | _ => raise Fail "impossible"
+      | _ => raise Fail "invalid binary operator"
     end
 
   fun interpret (statements, env) =

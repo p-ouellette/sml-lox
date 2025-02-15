@@ -13,16 +13,19 @@ sig
   val runtimeError: SourceToken.t * string -> unit
 end =
 struct
+  structure TIO = TextIO
+
   exception ParserError of SourceToken.t list
   exception RuntimeError of SourceToken.t * string
 
   val hadError = ref false
   val hadRuntimeError = ref false
 
-  fun sayErr s = TextIO.output (TextIO.stdErr, s)
+  fun eprint s =
+    (TIO.output (TIO.stdErr, s); TIO.flushOut TIO.stdOut)
 
   fun report (line, where_, msg) =
-    ( app sayErr
+    ( app eprint
         ["[line ", Int.toString line, "] Error", where_, ": ", msg, "\n"]
     ; hadError := true
     )
@@ -35,7 +38,7 @@ struct
         report (line, " at '" ^ lexeme ^ "'", msg)
 
   fun runtimeError ({line, ...}: SourceToken.t, msg) =
-    ( app sayErr [msg, "\n[line ", Int.toString line, "]\n"]
+    ( app eprint [msg, "\n[line ", Int.toString line, "]\n"]
     ; hadRuntimeError := true
     )
 end

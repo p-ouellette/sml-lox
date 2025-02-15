@@ -1,12 +1,20 @@
 structure Lox:
 sig
   val run: string * Environment.t -> Environment.t
-  val runFile: string -> OS.Process.status
-  val runPrompt: unit -> OS.Process.status
-  val main: string list -> OS.Process.status
+  val runFile: string -> Word8.word
+  val runPrompt: unit -> Word8.word
+  val main: string list -> Word8.word
 end =
 struct
   structure TIO = TextIO
+
+  structure Status =
+  struct
+    val success = 0w0 : Word8.word
+    val usageError = 0w64 : Word8.word
+    val parseError = 0w65 : Word8.word
+    val runtimeError = 0w70 : Word8.word
+  end
 
   fun run (prog, env) =
     let
@@ -24,8 +32,10 @@ struct
     in
       TIO.closeIn strm;
       run (prog, Environment.empty);
-      if ! Error.hadError orelse ! Error.hadRuntimeError then OS.Process.failure
-      else OS.Process.success
+
+      if ! Error.hadError then Status.parseError
+      else if ! Error.hadRuntimeError then Status.runtimeError
+      else Status.success
     end
 
   fun runPrompt () =
@@ -33,7 +43,7 @@ struct
       fun loop env =
         ( print "> "
         ; case TIO.inputLine TIO.stdIn of
-            NONE => (print "\n"; OS.Process.success)
+            NONE => (print "\n"; Status.success)
           | SOME s =>
               let val env' = run (s, env)
               (* XXX: no need to reset hadError if we don't check it in run *)
@@ -47,5 +57,5 @@ struct
   fun main [] = runPrompt ()
     | main [fname] = runFile fname
     | main _ =
-        (print "Usage: lox [script]"; OS.Process.failure)
+        (print "Usage: lox [script]"; Status.usageError)
 end

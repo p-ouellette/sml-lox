@@ -2,7 +2,7 @@ structure Lox:
 sig
   val run: string * Environment.t -> Environment.t
   val runFile: string -> Word8.word
-  val runPrompt: unit -> Word8.word
+  val runPrompt: Environment.t -> Word8.word
   val main: string list -> Word8.word
 end =
 struct
@@ -21,7 +21,7 @@ struct
       val tokens = Scanner.scanTokens prog
       val statements = Parser.parse tokens
     in
-      Interpreter.interpret (statements, env)
+      if ! Error.hadError then env else Interpreter.interpret (statements, env)
     end
     handle Error.ParserError _ => env
 
@@ -38,23 +38,14 @@ struct
       else Status.success
     end
 
-  fun runPrompt () =
-    let
-      fun loop env =
-        ( print "> "
-        ; case TIO.inputLine TIO.stdIn of
-            NONE => (print "\n"; Status.success)
-          | SOME s =>
-              let val env' = run (s, env)
-              (* XXX: no need to reset hadError if we don't check it in run *)
-              in Error.hadError := false; loop env'
-              end
-        )
-    in
-      loop Environment.empty
-    end
+  fun runPrompt env =
+    ( print "> "
+    ; case TIO.inputLine TIO.stdIn of
+        NONE => (print "\n"; Status.success)
+      | SOME s => runPrompt (run (s, env) before Error.hadError := false)
+    )
 
-  fun main [] = runPrompt ()
+  fun main [] = runPrompt Environment.empty
     | main [fname] = runFile fname
     | main _ =
         (print "Usage: lox [script]"; Status.usageError)

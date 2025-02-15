@@ -69,29 +69,21 @@ struct
 
   (* program -> declaration* EOF *)
   fun program (decs, sts) =
-    if check ([T.EOF], sts) then
-      rev decs
-    else
-      (* XXX: handle ParserError here instead of in declaration? *)
-      let
-        val (dec, sts') = declaration sts
-        val decs =
-          case dec of
-            SOME dec => dec :: decs
-          | NONE => decs
-      in
-        program (decs, sts')
-      end
+    if check ([T.EOF], sts) then rev decs
+    else program (maybeDeclaration (decs, sts))
+
+  (* parse a declaration into decs or recover from an error *)
+  and maybeDeclaration (decs, sts) =
+    let val (dec, sts') = declaration sts
+    in (dec :: decs, sts')
+    end
+    handle Error.ParserError sts' => (decs, syncronize sts')
 
   (* declaration -> varDecl | statement *)
   and declaration sts =
-    (case match ([T.VAR], sts) of
-       SOME (_, sts') =>
-         let val (dec, sts') = varDeclaration sts'
-         in (SOME dec, sts')
-         end
-     | NONE => let val (stmt, sts') = statement sts in (SOME stmt, sts') end)
-    handle Error.ParserError sts' => (NONE, syncronize sts')
+    case match ([T.VAR], sts) of
+      SOME (_, sts') => varDeclaration sts'
+    | NONE => statement sts
 
   (* varDecl -> "var" IDENTIFIER ( "=" expression )? ";" *)
   and varDeclaration sts =
@@ -144,16 +136,7 @@ struct
       in (rev decs, sts)
       end
     else
-      let
-        val (dec, sts) = declaration sts
-        (* XXX: see program *)
-        val decs =
-          case dec of
-            SOME dec => dec :: decs
-          | NONE => decs
-      in
-        block (decs, sts)
-      end
+      block (maybeDeclaration (decs, sts))
 
   and expression sts = assignment sts
 

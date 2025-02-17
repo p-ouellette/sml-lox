@@ -15,12 +15,21 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Var ({lexeme, ...}, init), env) =
-        let val (value, env) = evaluate (init, env)
+  fun execute (Stmt.Var {name = {lexeme, ...}, initializer}, env) =
+        let val (value, env) = evaluate (initializer, env)
         in Env.define (env, lexeme, value)
         end
     | execute (Stmt.Expression expr, env) =
         #2 (evaluate (expr, env))
+    | execute (Stmt.If {condition, thenBranch, elseBranch}, env) =
+        let
+          val (value, env) = evaluate (condition, env)
+        in
+          if LV.isTruthy value then
+            execute (thenBranch, env)
+          else
+            getOpt (Option.map (fn stmt => execute (stmt, env)) elseBranch, env)
+        end
     | execute (Stmt.Print expr, env) =
         let val (value, env) = evaluate (expr, env)
         in (print (LV.toString value ^ "\n"); env)
@@ -39,6 +48,7 @@ struct
         | eval (Expr.Grouping expr) = evaluate (expr, env)
         | eval (Expr.Unary x) = unaryExpr x env
         | eval (Expr.Binary x) = binaryExpr x env
+        | eval (Expr.Logical x) = logicalExpr x env
         | eval (Expr.Assign (name, value)) =
             let val (value, env) = evaluate (value, env)
             in (value, Env.assign (env, name, value))
@@ -81,6 +91,16 @@ struct
                raise Error.RuntimeError
                  (operator, "Operands must be two numbers or two strings."))
       | _ => raise Fail "invalid binary operator"
+    end
+
+  and logicalExpr (left, operator, right) env =
+    let
+      val (left, env) = evaluate (left, env)
+    in
+      case #token operator of
+        T.OR => if LV.isTruthy left then (left, env) else evaluate (right, env)
+      | T.AND => if LV.isTruthy left then evaluate (right, env) else (left, env)
+      | _ => raise Fail "invalid logical operator"
     end
 
   fun interpret (statements, env) =

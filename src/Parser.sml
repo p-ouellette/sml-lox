@@ -52,13 +52,13 @@ struct
     end
 
   (* binary -> operand ( operator operand )* *)
-  fun binary (operators, operand) sts =
+  fun binaryOp cons (operators, operand) sts =
     let
       fun tail (left, sts) =
         case match (operators, sts) of
           SOME (operator, sts) =>
             let val (right, sts) = operand sts
-            in tail (Expr.Binary (left, operator, right), sts)
+            in tail (cons (left, operator, right), sts)
             end
         | NONE => (left, sts)
       val (left, sts) = operand sts
@@ -66,6 +66,9 @@ struct
     in
       (expr, sts)
     end
+
+  val binary = binaryOp Expr.Binary
+  val logical = binaryOp Expr.Logical
 
   (* program -> declaration* EOF *)
   fun program (decs, sts) =
@@ -96,20 +99,24 @@ struct
       val (_, sts) =
         consume (T.SEMICOLON, "Expect ';' after variable declaration.") sts
     in
-      (Stmt.Var (name, initializer), sts)
+      (Stmt.Var {name = name, initializer = initializer}, sts)
     end
 
-  (* statement -> exprStmt | printStmt | block *)
+  (* statement -> exprStmt | ifStmt | printStmt | whileStmt | block *)
   and statement sts =
-    case match ([T.PRINT], sts) of
-      SOME (_, sts') => printStatement sts'
-    | NONE =>
-        (case match ([T.LEFT_BRACE], sts) of
-           SOME (_, sts') =>
-             let val (decs, sts') = block ([], sts')
-             in (Stmt.Block decs, sts')
-             end
-         | NONE => expressionStatement sts)
+    let
+      val (st, sts') = advance sts
+    in
+      case #token st of
+        T.IF => ifStatement sts'
+      | T.PRINT => printStatement sts'
+      | T.WHILE => whileStatement sts'
+      | T.LEFT_BRACE =>
+          let val (decs, sts') = block ([], sts')
+          in (Stmt.Block decs, sts')
+          end
+      | _ => expressionStatement sts
+    end
 
   (* exprStmt -> expression ";" *)
   and expressionStatement sts =
@@ -120,6 +127,25 @@ struct
       (Stmt.Expression expr, sts)
     end
 
+  (* ifStmt -> "if" "(" expression ")" statement ( "else" statement )? *)
+  and ifStatement sts =
+    let
+      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'if'.") sts
+      val (cond, sts) = expression sts
+      val (_, sts) =
+        consume (T.RIGHT_PAREN, "Expect ')' after if condition.") sts
+      val (then_, sts) = statement sts
+      val (else_, sts) =
+        case match ([T.ELSE], sts) of
+          NONE => (NONE, sts)
+        | SOME (_, sts') =>
+            let val (elseBranch, sts) = statement sts'
+            in (SOME elseBranch, sts)
+            end
+    in
+      (Stmt.If {condition = cond, thenBranch = then_, elseBranch = else_}, sts)
+    end
+
   (* printStmt -> "print" expression ";" *)
   and printStatement sts =
     let
@@ -127,6 +153,17 @@ struct
       val (_, sts) = consume (T.SEMICOLON, "Expect ';' after value.") sts
     in
       (Stmt.Print value, sts)
+    end
+
+  (* whileStmt -> "while" "(" expression ")" statement *)
+  and whileStatement sts =
+    let
+      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'while'.") sts
+      val (cond, sts) = expression sts
+      val (_, sts) = consume (T.RIGHT_PAREN, "Expect ')' after condition.") sts
+      val (body, sts) = statement sts
+    in
+      (Stmt.While {condition = cond, body = body}, sts)
     end
 
   (* block -> "{" declaration* "}" *)
@@ -140,10 +177,10 @@ struct
 
   and expression sts = assignment sts
 
-  (* assignment -> IDENTIFIER "=" assignment | equality *)
+  (* assignment -> IDENTIFIER "=" assignment | logic_or *)
   and assignment sts =
     let
-      val (expr, sts) = equality sts
+      val (expr, sts) = or sts
     in
       case match ([T.EQUAL], sts) of
         SOME (equals, sts) =>
@@ -157,6 +194,12 @@ struct
           end
       | NONE => (expr, sts)
     end
+
+  and or sts =
+    logical ([T.OR], and_) sts
+
+  and and_ sts =
+    logical ([T.AND], equality) sts
 
   and equality sts =
     binary ([T.BANG_EQUAL, T.EQUAL_EQUAL], comparison) sts

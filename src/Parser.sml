@@ -31,21 +31,15 @@ struct
 
   fun syncronize sts =
     let
-      val ({token, ...}, sts') = advance sts
+      val stmtStart =
+        [T.CLASS, T.FOR, T.FUN, T.IF, T.PRINT, T.RETURN, T.VAR, T.WHILE]
+      val (st, sts') = advance sts
     in
       (* stop after semicolon or at start of statement *)
-      case token of
+      case #token st of
         T.EOF => sts
       | T.SEMICOLON => sts'
-      | T.CLASS => sts
-      | T.FOR => sts
-      | T.FUN => sts
-      | T.IF => sts
-      | T.PRINT => sts
-      | T.RETURN => sts
-      | T.VAR => sts
-      | T.WHILE => sts
-      | _ => syncronize sts'
+      | _ => if check (stmtStart, sts') then sts' else syncronize sts'
     end
 
   (* binary -> operand ( operator operand )* *)

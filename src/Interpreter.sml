@@ -46,9 +46,7 @@ struct
           loop env
         end
     | execute (Stmt.Block stmts, env) =
-        let val env = foldl execute (Env.new env) stmts
-        in Env.enclosing env
-        end
+        Env.enclosing (foldl execute (Env.new env) stmts)
 
   and evaluate (expr, env) =
     let

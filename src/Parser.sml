@@ -15,7 +15,7 @@ struct
     let
       val (st, sts') = advance sts
     in
-      if List.exists (fn t => Token.sameType (t, #token st)) tokens then
+      if List.exists (fn t => T.sameType (t, #token st)) tokens then
         SOME (st, sts')
       else
         NONE
@@ -25,11 +25,8 @@ struct
     Option.isSome (match (tokens, sts))
 
   fun consume (token, msg) sts =
-    let
-      val r as (st, _) = advance sts
-    in
-      if Token.sameType (token, #token st) then r
-      else raise error (st, msg, sts)
+    let val r as (st, _) = advance sts
+    in if T.sameType (token, #token st) then r else raise error (st, msg, sts)
     end
 
   fun syncronize sts =
@@ -102,13 +99,14 @@ struct
       (Stmt.Var {name = name, initializer = initializer}, sts)
     end
 
-  (* statement -> exprStmt | ifStmt | printStmt | whileStmt | block *)
+  (* statement -> exprStmt | forStmt | ifStmt | printStmt | whileStmt | block *)
   and statement sts =
     let
       val (st, sts') = advance sts
     in
       case #token st of
-        T.IF => ifStatement sts'
+        T.FOR => forStatement sts'
+      | T.IF => ifStatement sts'
       | T.PRINT => printStatement sts'
       | T.WHILE => whileStatement sts'
       | T.LEFT_BRACE =>
@@ -125,6 +123,49 @@ struct
       val (_, sts) = consume (T.SEMICOLON, "Expect ';' after expression.") sts
     in
       (Stmt.Expression expr, sts)
+    end
+
+  (* forStmt -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";"
+   * expression? ")" statement
+   *)
+  and forStatement sts =
+    let
+      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'for'.") sts
+      val (st, sts') = advance sts
+      val (initializer, sts) =
+        case #token st of
+          T.SEMICOLON => (NONE, sts')
+        | t =>
+            let
+              val (stmt, sts) =
+                case t of
+                  T.VAR => varDeclaration sts'
+                | _ => expressionStatement sts
+            in
+              (SOME stmt, sts)
+            end
+      val (condition, sts) =
+        if check ([T.SEMICOLON], sts) then (Expr.Boolean true, sts)
+        else let val (expr, sts) = expression sts in (expr, sts) end
+      val (_, sts) =
+        consume (T.SEMICOLON, "Expect ';' after loop condition.") sts
+      val (increment, sts) =
+        if check ([T.RIGHT_PAREN], sts) then (NONE, sts)
+        else let val (expr, sts) = expression sts in (SOME expr, sts) end
+      val (_, sts) =
+        consume (T.RIGHT_PAREN, "Expect ')' after for clauses.") sts
+      val (body, sts) = statement sts
+      val body =
+        case increment of
+          SOME increment => Stmt.Block [body, Stmt.Expression increment]
+        | NONE => body
+      val body = Stmt.While {condition = condition, body = body}
+      val body =
+        case initializer of
+          SOME initializer => Stmt.Block [initializer, body]
+        | NONE => body
+    in
+      (body, sts)
     end
 
   (* ifStmt -> "if" "(" expression ")" statement ( "else" statement )? *)

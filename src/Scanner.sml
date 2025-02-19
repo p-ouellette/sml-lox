@@ -38,7 +38,7 @@ struct
      | "false" => T.FALSE
      | "for" => T.FOR
      | "fun" => T.FUN
-     | "if" => T.FUN
+     | "if" => T.IF
      | "nil" => T.NIL
      | "or" => T.OR
      | "print" => T.PRINT

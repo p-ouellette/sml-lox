@@ -31,7 +31,7 @@ struct
       val prog = TIO.inputAll strm
     in
       TIO.closeIn strm;
-      run (prog, Environment.empty);
+      run (prog, Environment.initial);
 
       if ! Error.hadError then Status.parseError
       else if ! Error.hadRuntimeError then Status.runtimeError
@@ -45,7 +45,7 @@ struct
       | SOME s => runPrompt (run (s, env) before Error.hadError := false)
     )
 
-  fun main [] = runPrompt Environment.empty
+  fun main [] = runPrompt Environment.initial
     | main [fname] = runFile fname
     | main _ =
         (print "Usage: lox [script]"; Status.usageError)

@@ -20,12 +20,14 @@ struct
         in Env.define (env, lexeme, value)
         end
     | execute (Stmt.Expression expr, env) =
-        #2 (evaluate (expr, env))
+        let val (_, env) = evaluate (expr, env)
+        in env
+        end
     | execute (Stmt.If {condition, thenBranch, elseBranch}, env) =
         let
-          val (value, env) = evaluate (condition, env)
+          val (cond, env) = evaluate (condition, env)
         in
-          if LV.isTruthy value then
+          if LV.isTruthy cond then
             execute (thenBranch, env)
           else
             getOpt (Option.map (fn stmt => execute (stmt, env)) elseBranch, env)
@@ -34,8 +36,19 @@ struct
         let val (value, env) = evaluate (expr, env)
         in (print (LV.toString value ^ "\n"); env)
         end
+    | execute (Stmt.While {condition, body}, env) =
+        let
+          fun loop env =
+            let val (cond, env) = evaluate (condition, env)
+            in if LV.isTruthy cond then loop (execute (body, env)) else env
+            end
+        in
+          loop env
+        end
     | execute (Stmt.Block stmts, env) =
-        (foldl execute env stmts; env)
+        let val env = foldl execute (Env.new env) stmts
+        in Env.enclosing env
+        end
 
   and evaluate (expr, env) =
     let
@@ -46,9 +59,9 @@ struct
         | eval (Expr.Variable name) =
             (Env.get (env, name), env)
         | eval (Expr.Grouping expr) = evaluate (expr, env)
-        | eval (Expr.Unary x) = unaryExpr x env
-        | eval (Expr.Binary x) = binaryExpr x env
-        | eval (Expr.Logical x) = logicalExpr x env
+        | eval (Expr.Unary x) = unaryExpr (x, env)
+        | eval (Expr.Binary x) = binaryExpr (x, env)
+        | eval (Expr.Logical x) = logicalExpr (x, env)
         | eval (Expr.Assign (name, value)) =
             let val (value, env) = evaluate (value, env)
             in (value, Env.assign (env, name, value))
@@ -57,7 +70,7 @@ struct
       eval expr
     end
 
-  and unaryExpr (operator, right) env =
+  and unaryExpr ((operator, right), env) =
     let
       val (right, env) = evaluate (right, env)
     in
@@ -67,7 +80,7 @@ struct
       | _ => raise Fail "invalid unary operator"
     end
 
-  and binaryExpr (left, operator, right) env =
+  and binaryExpr ((left, operator, right), env) =
     let
       val (left, env) = evaluate (left, env)
       val (right, env) = evaluate (right, env)
@@ -93,7 +106,7 @@ struct
       | _ => raise Fail "invalid binary operator"
     end
 
-  and logicalExpr (left, operator, right) env =
+  and logicalExpr ((left, operator, right), env) =
     let
       val (left, env) = evaluate (left, env)
     in

@@ -2,7 +2,9 @@ structure Environment :>
 sig
   type t
 
-  val empty: t
+  val initial: t
+  val new: t -> t
+  val enclosing: t -> t
   val define: t * string * LoxValue.t -> t
   val assign: t * SourceToken.t * LoxValue.t -> t
   val get: t * SourceToken.t -> LoxValue.t
@@ -12,22 +14,39 @@ struct
     RedBlackMapFn
       (struct type ord_key = string val compare = String.compare end)
 
-  type t = LoxValue.t M.map
+  datatype t = Env of {values: LoxValue.t M.map, enclosing: t option}
 
-  val empty = M.empty
+  val initial = Env {values = M.empty, enclosing = NONE}
 
-  fun define (env, name, value) = M.insert (env, name, value)
+  fun new enclosing =
+    Env {values = M.empty, enclosing = SOME enclosing}
+
+  fun enclosing (Env {enclosing = SOME env, ...}) = env
+    | enclosing _ = raise Fail "no enclosing environment"
+
+  fun insert (Env {values, enclosing}, name, value) =
+    Env {values = M.insert (values, name, value), enclosing = enclosing}
+
+  val define = insert
 
   fun undefined name =
     raise Error.RuntimeError
       (name, "Undefined variable '" ^ #lexeme name ^ "'.")
 
-  fun assign (env, name as {lexeme, ...}, value) =
-    if M.inDomain (env, lexeme) then M.insert (env, lexeme, value)
-    else undefined name
+  fun assign (env as Env {values, enclosing}, name as {lexeme, ...}, value) =
+    if M.inDomain (values, lexeme) then
+      insert (env, lexeme, value)
+    else
+      case enclosing of
+        SOME env =>
+          Env {values = values, enclosing = SOME (assign (env, name, value))}
+      | NONE => undefined name
 
-  fun get (env, name) =
-    case M.find (env, #lexeme name) of
+  fun get (Env {values, enclosing}, name) =
+    case M.find (values, #lexeme name) of
       SOME value => value
-    | NONE => undefined name
+    | NONE =>
+        (case enclosing of
+           SOME env => get (env, name)
+         | NONE => undefined name)
 end

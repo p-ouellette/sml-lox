@@ -8,7 +8,7 @@ into the SML/NJ REPL.
 
 ## Status
 
-Currently passes the [test suite][test-suite] for chapter 8.
+Currently passes the [test suite][test-suite] for chapter 9.
 
 ## Notes
 

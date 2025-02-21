@@ -24,7 +24,7 @@ struct
   fun check (tokens, sts) =
     Option.isSome (match (tokens, sts))
 
-  fun consume (token, msg) sts =
+  fun consume (token, msg, sts) =
     let val r as (st, _) = advance sts
     in if T.sameType (token, #token st) then r else raise error (st, msg, sts)
     end
@@ -82,13 +82,13 @@ struct
   (* varDecl -> "var" IDENTIFIER ( "=" expression )? ";" *)
   and varDeclaration sts =
     let
-      val (name, sts) = consume (T.IDENTIFIER, "Expect variable name.") sts
+      val (name, sts) = consume (T.IDENTIFIER, "Expect variable name.", sts)
       val (initializer, sts) =
         case match ([T.EQUAL], sts) of
           SOME (_, sts') => expression sts'
         | NONE => (Expr.Nil, sts)
-      val (_, sts) =
-        consume (T.SEMICOLON, "Expect ';' after variable declaration.") sts
+      val (_, sts) = consume
+        (T.SEMICOLON, "Expect ';' after variable declaration.", sts)
     in
       (Stmt.Var {name = name, initializer = initializer}, sts)
     end
@@ -114,7 +114,7 @@ struct
   and expressionStatement sts =
     let
       val (expr, sts) = expression sts
-      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after expression.") sts
+      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after expression.", sts)
     in
       (Stmt.Expression expr, sts)
     end
@@ -124,7 +124,7 @@ struct
    *)
   and forStatement sts =
     let
-      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'for'.") sts
+      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'for'.", sts)
       val (st, sts') = advance sts
       val (initializer, sts) =
         case #token st of
@@ -141,13 +141,13 @@ struct
       val (condition, sts) =
         if check ([T.SEMICOLON], sts) then (Expr.Boolean true, sts)
         else let val (expr, sts) = expression sts in (expr, sts) end
-      val (_, sts) =
-        consume (T.SEMICOLON, "Expect ';' after loop condition.") sts
+      val (_, sts) = consume
+        (T.SEMICOLON, "Expect ';' after loop condition.", sts)
       val (increment, sts) =
         if check ([T.RIGHT_PAREN], sts) then (NONE, sts)
         else let val (expr, sts) = expression sts in (SOME expr, sts) end
-      val (_, sts) =
-        consume (T.RIGHT_PAREN, "Expect ')' after for clauses.") sts
+      val (_, sts) = consume
+        (T.RIGHT_PAREN, "Expect ')' after for clauses.", sts)
       val (body, sts) = statement sts
       val body =
         case increment of
@@ -165,10 +165,10 @@ struct
   (* ifStmt -> "if" "(" expression ")" statement ( "else" statement )? *)
   and ifStatement sts =
     let
-      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'if'.") sts
+      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'if'.", sts)
       val (cond, sts) = expression sts
-      val (_, sts) =
-        consume (T.RIGHT_PAREN, "Expect ')' after if condition.") sts
+      val (_, sts) = consume
+        (T.RIGHT_PAREN, "Expect ')' after if condition.", sts)
       val (then_, sts) = statement sts
       val (else_, sts) =
         case match ([T.ELSE], sts) of
@@ -185,7 +185,7 @@ struct
   and printStatement sts =
     let
       val (value, sts) = expression sts
-      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after value.") sts
+      val (_, sts) = consume (T.SEMICOLON, "Expect ';' after value.", sts)
     in
       (Stmt.Print value, sts)
     end
@@ -193,9 +193,9 @@ struct
   (* whileStmt -> "while" "(" expression ")" statement *)
   and whileStatement sts =
     let
-      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'while'.") sts
+      val (_, sts) = consume (T.LEFT_PAREN, "Expect '(' after 'while'.", sts)
       val (cond, sts) = expression sts
-      val (_, sts) = consume (T.RIGHT_PAREN, "Expect ')' after condition.") sts
+      val (_, sts) = consume (T.RIGHT_PAREN, "Expect ')' after condition.", sts)
       val (body, sts) = statement sts
     in
       (Stmt.While {condition = cond, body = body}, sts)
@@ -204,7 +204,7 @@ struct
   (* block -> "{" declaration* "}" *)
   and block (decs, sts) =
     if check ([T.RIGHT_BRACE, T.EOF], sts) then
-      let val (_, sts) = consume (T.RIGHT_BRACE, "Expect '}' after block.") sts
+      let val (_, sts) = consume (T.RIGHT_BRACE, "Expect '}' after block.", sts)
       in (rev decs, sts)
       end
     else
@@ -248,14 +248,47 @@ struct
   and factor sts =
     binary ([T.SLASH, T.STAR], unary) sts
 
-  (* unary -> ( "!" | "-" ) unary | primary *)
+  (* unary -> ( "!" | "-" ) unary | call *)
   and unary sts =
     case match ([T.BANG, T.MINUS], sts) of
       SOME (operator, sts') =>
         let val (expr, sts') = unary sts'
         in (Expr.Unary (operator, expr), sts')
         end
-    | NONE => primary sts
+    | NONE => call sts
+
+  (* call -> primary ( "(" arguments? ")" )* *)
+  and call sts =
+    let
+      fun tail (expr, sts) =
+        case match ([T.LEFT_PAREN], sts) of
+          SOME (_, sts) => tail (finishCall (expr, sts))
+        | NONE => (expr, sts)
+    in
+      tail (primary sts)
+    end
+
+  and finishCall (callee, sts) =
+    let
+      fun parseArgs (acc, sts) =
+        let
+          val (arg, sts) = expression sts
+        in
+          if length acc >= 255 then
+            ignore (error (hd sts, "Can't have more than 255 arguments.", sts))
+          else
+            ();
+          case match ([T.COMMA], sts) of
+            SOME (_, sts') => parseArgs (arg :: acc, sts')
+          | NONE => (rev acc, sts)
+        end
+      val (arguments, sts) =
+        if check ([T.RIGHT_PAREN], sts) then ([], sts) else parseArgs ([], sts)
+      val (paren, sts) =
+        consume (T.RIGHT_PAREN, "Expect ')' after arguments.", sts)
+    in
+      (Expr.Call {callee = callee, paren = paren, arguments = arguments}, sts)
+    end
 
   (* primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" *)
   and primary sts =
@@ -272,8 +305,8 @@ struct
       | T.LEFT_PAREN =>
           let
             val (expr, sts') = expression sts'
-            val (_, sts') =
-              consume (T.RIGHT_PAREN, "Expect ')' after expression.") sts'
+            val (_, sts') = consume
+              (T.RIGHT_PAREN, "Expect ')' after expression.", sts')
           in
             (Expr.Grouping expr, sts')
           end

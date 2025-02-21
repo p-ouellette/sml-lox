@@ -15,4 +15,6 @@ Currently passes the [test suite][test-suite] for chapter 9.
 - RuntimeException should propagate the environment to preserve changes before
   the error (only relevant for REPL)
 
+- parameterize value type in Environment
+
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

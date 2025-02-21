@@ -57,6 +57,7 @@ struct
         | eval (Expr.Variable name) =
             (Env.get (env, name), env)
         | eval (Expr.Grouping expr) = evaluate (expr, env)
+        | eval (Expr.Call x) = callExpr (x, env)
         | eval (Expr.Unary x) = unaryExpr (x, env)
         | eval (Expr.Binary x) = binaryExpr (x, env)
         | eval (Expr.Logical x) = logicalExpr (x, env)
@@ -66,6 +67,34 @@ struct
             end
     in
       eval expr
+    end
+
+  and callExpr ({callee, paren, arguments}, env) =
+    let
+      fun evalArgs ([], env) = ([], env)
+        | evalArgs (arg :: args, env) =
+            let
+              val (arg, env) = evaluate (arg, env)
+              val (args, env) = evalArgs (args, env)
+            in
+              (arg :: args, env)
+            end
+      val (callee, env) = evaluate (callee, env)
+      val (args, env) = evalArgs (arguments, env)
+    in
+      case callee of
+        LV.Function {arity, func} =>
+          if arity <> length arguments then
+            raise Error.RuntimeError
+              ( paren
+              , "Expected " ^ Int.toString arity ^ " arguments but got "
+                ^ Int.toString (length arguments) ^ "."
+              )
+          else
+            (func args, env)
+      | _ =>
+          raise Error.RuntimeError
+            (paren, "Can only call functions and classes.")
     end
 
   and unaryExpr ((operator, right), env) =

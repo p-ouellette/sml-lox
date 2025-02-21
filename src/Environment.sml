@@ -2,7 +2,7 @@ structure Environment :>
 sig
   type t
 
-  val initial: t
+  val base: t
   val new: t -> t
   val enclosing: t -> t
   val define: t * string * LoxValue.t -> t
@@ -16,7 +16,13 @@ struct
 
   datatype t = Env of {values: LoxValue.t M.map, enclosing: t option}
 
-  val initial = Env {values = M.empty, enclosing = NONE}
+  val clock = LoxValue.Function
+    { arity = 0
+    , func = fn _ =>
+        LoxValue.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
+    }
+
+  val base = Env {values = M.singleton ("clock", clock), enclosing = NONE}
 
   fun new enclosing =
     Env {values = M.empty, enclosing = SOME enclosing}

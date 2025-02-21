@@ -1,13 +1,24 @@
 structure LoxValue:
 sig
-  datatype t = Nil | Boolean of bool | Number of real | String of string
+  datatype t =
+    Nil
+  | Boolean of bool
+  | Number of real
+  | String of string
+  (* XXX: should take and return env *)
+  | Function of {arity: int, func: t list -> t}
 
   val isTruthy: t -> bool
   val isEqual: t * t -> bool
   val toString: t -> string
 end =
 struct
-  datatype t = Nil | Boolean of bool | Number of real | String of string
+  datatype t =
+    Nil
+  | Boolean of bool
+  | Number of real
+  | String of string
+  | Function of {arity: int, func: t list -> t}
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false
@@ -41,4 +52,5 @@ struct
     | toString (Boolean b) = Bool.toString b
     | toString (Number n) = numberToString n
     | toString (String s) = s
+    | toString (Function _) = "<function>"
 end

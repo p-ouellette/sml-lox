@@ -2,7 +2,8 @@ structure Stmt:
 sig
   datatype t =
   (* declarations *)
-    Var of {name: SourceToken.t, initializer: Expr.t}
+    Function of {name: SourceToken.t, params: SourceToken.t list, body: t list}
+  | Var of {name: SourceToken.t, initializer: Expr.t}
   (* statements *)
   | Expression of Expr.t
   | If of {condition: Expr.t, thenBranch: t, elseBranch: t option}
@@ -12,7 +13,8 @@ sig
 end =
 struct
   datatype t =
-    Var of {name: SourceToken.t, initializer: Expr.t}
+    Function of {name: SourceToken.t, params: SourceToken.t list, body: t list}
+  | Var of {name: SourceToken.t, initializer: Expr.t}
   | Expression of Expr.t
   | If of {condition: Expr.t, thenBranch: t, elseBranch: t option}
   | Print of Expr.t

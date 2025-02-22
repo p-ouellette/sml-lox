@@ -73,11 +73,49 @@ struct
     end
     handle Error.ParserError sts' => (decs, syncronize sts')
 
-  (* declaration -> varDecl | statement *)
+  (* declaration -> funDecl | varDecl | statement
+   * funDecl -> "fun" function
+   *)
   and declaration sts =
-    case match ([T.VAR], sts) of
-      SOME (_, sts') => varDeclaration sts'
-    | NONE => statement sts
+    let
+      val (st, sts') = advance sts
+    in
+      case #token st of
+        T.FUN => function ("function", sts')
+      | T.VAR => varDeclaration sts'
+      | _ => statement sts
+    end
+
+  (* function -> IDENTIFIER "(" parameters? ")" block *)
+  and function (kind, sts) =
+    let
+      fun parseParams (params, sts) =
+        let
+          val (name, sts) =
+            consume (T.IDENTIFIER, "Expect parameter name.", sts)
+        in
+          if length params >= 255 then
+            ignore (error (hd sts, "Can't have more than 255 parameters.", sts))
+          else
+            ();
+          case match ([T.COMMA], sts) of
+            SOME (_, sts') => parseParams (name :: params, sts')
+          | NONE => (rev params, sts)
+        end
+      val (name, sts) = consume (T.IDENTIFIER, "Expect " ^ kind ^ " name.", sts)
+      val (_, sts) = consume
+        (T.LEFT_PAREN, "Expect '(' after " ^ kind ^ " name.", sts)
+      val (params, sts) =
+        if check ([T.RIGHT_PAREN], sts) then ([], sts)
+        else parseParams ([], sts)
+      val (_, sts) = consume
+        (T.RIGHT_PAREN, "Expect ')' after parameters.", sts)
+      val (_, sts) = consume
+        (T.LEFT_BRACE, "Expect '{' before " ^ kind ^ " body.", sts)
+      val (body, sts) = block ([], sts)
+    in
+      (Stmt.Function {name = name, params = params, body = body}, sts)
+    end
 
   (* varDecl -> "var" IDENTIFIER ( "=" expression )? ";" *)
   and varDeclaration sts =
@@ -270,17 +308,17 @@ struct
 
   and finishCall (callee, sts) =
     let
-      fun parseArgs (acc, sts) =
+      fun parseArgs (args, sts) =
         let
           val (arg, sts) = expression sts
         in
-          if length acc >= 255 then
+          if length args >= 255 then
             ignore (error (hd sts, "Can't have more than 255 arguments.", sts))
           else
             ();
           case match ([T.COMMA], sts) of
-            SOME (_, sts') => parseArgs (arg :: acc, sts')
-          | NONE => (rev acc, sts)
+            SOME (_, sts') => parseArgs (arg :: args, sts')
+          | NONE => (rev args, sts)
         end
       val (arguments, sts) =
         if check ([T.RIGHT_PAREN], sts) then ([], sts) else parseArgs ([], sts)

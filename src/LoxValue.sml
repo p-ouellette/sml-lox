@@ -1,24 +1,25 @@
 structure LoxValue:
 sig
-  datatype t =
+  (* The type of a Lox value, parameterized with the type an environment. *)
+  datatype 'a t =
     Nil
   | Boolean of bool
   | Number of real
   | String of string
-  (* XXX: should take and return env *)
-  | Function of {arity: int, func: t list -> t}
+  (* call (args, env) evaluates the call and updates the environment. *)
+  | Callable of {arity: int, call: 'a t list * 'a -> 'a t * 'a, repr: string}
 
-  val isTruthy: t -> bool
-  val isEqual: t * t -> bool
-  val toString: t -> string
+  val isTruthy: 'a t -> bool
+  val isEqual: 'a t * 'a t -> bool
+  val toString: 'a t -> string
 end =
 struct
-  datatype t =
+  datatype 'a t =
     Nil
   | Boolean of bool
   | Number of real
   | String of string
-  | Function of {arity: int, func: t list -> t}
+  | Callable of {arity: int, call: 'a t list * 'a -> 'a t * 'a, repr: string}
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false
@@ -52,5 +53,5 @@ struct
     | toString (Boolean b) = Bool.toString b
     | toString (Number n) = numberToString n
     | toString (String s) = s
-    | toString (Function _) = "<function>"
+    | toString (Callable f) = #repr f
 end

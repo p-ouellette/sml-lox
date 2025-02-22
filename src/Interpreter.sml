@@ -83,7 +83,7 @@ struct
       val (args, env) = evalArgs (arguments, env)
     in
       case callee of
-        LV.Function {arity, func} =>
+        LV.Callable {arity, call, ...} =>
           if arity <> length arguments then
             raise Error.RuntimeError
               ( paren
@@ -91,7 +91,7 @@ struct
                 ^ Int.toString (length arguments) ^ "."
               )
           else
-            (func args, env)
+            call (args, env)
       | _ =>
           raise Error.RuntimeError
             (paren, "Can only call functions and classes.")

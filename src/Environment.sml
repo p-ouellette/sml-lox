@@ -5,22 +5,20 @@ sig
   val base: t
   val new: t -> t
   val enclosing: t -> t
-  val define: t * string * LoxValue.t -> t
-  val assign: t * SourceToken.t * LoxValue.t -> t
-  val get: t * SourceToken.t -> LoxValue.t
+  val define: t * string * t LoxValue.t -> t
+  val assign: t * SourceToken.t * t LoxValue.t -> t
+  val get: t * SourceToken.t -> t LoxValue.t
 end =
 struct
   structure M =
     RedBlackMapFn
       (struct type ord_key = string val compare = String.compare end)
 
-  datatype t = Env of {values: LoxValue.t M.map, enclosing: t option}
+  datatype t = Env of {values: t LoxValue.t M.map, enclosing: t option}
 
-  val clock = LoxValue.Function
-    { arity = 0
-    , func = fn _ =>
-        LoxValue.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
-    }
+  fun clock (_, env) =
+    (LoxValue.Number (Real.fromLargeInt (Time.toSeconds (Time.now ()))), env)
+  val clock = LoxValue.Callable {arity = 0, call = clock, repr = "<native fn>"}
 
   val base = Env {values = M.singleton ("clock", clock), enclosing = NONE}
 

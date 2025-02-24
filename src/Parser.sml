@@ -132,7 +132,9 @@ struct
       (Stmt.Var {name = name, initializer = initializer}, sts)
     end
 
-  (* statement -> exprStmt | forStmt | ifStmt | printStmt | whileStmt | block *)
+  (* statement -> exprStmt | forStmt | ifStmt | printStmt | returnStmt
+   *            | whileStmt | block
+   *)
   and statement sts =
     let
       val (st, sts') = advance sts
@@ -141,6 +143,7 @@ struct
         T.FOR => forStatement sts'
       | T.IF => ifStatement sts'
       | T.PRINT => printStatement sts'
+      | T.RETURN => returnStatement (st, sts')
       | T.WHILE => whileStatement sts'
       | T.LEFT_BRACE =>
           let val (decs, sts') = block ([], sts')
@@ -227,6 +230,17 @@ struct
       val (_, sts) = consume (T.SEMICOLON, "Expect ';' after value.", sts)
     in
       (Stmt.Print value, sts)
+    end
+
+  (* returnStmt -> "return" expression? ";" *)
+  and returnStatement (keyword, sts) =
+    let
+      val (value, sts) =
+        if check ([T.SEMICOLON], sts) then (Expr.Nil, sts) else expression sts
+      val (_, sts) = consume
+        (T.SEMICOLON, "Expect ';' after return value.", sts)
+    in
+      (Stmt.Return (keyword, value), sts)
     end
 
   (* whileStmt -> "while" "(" expression ")" statement *)

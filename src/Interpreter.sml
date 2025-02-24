@@ -7,6 +7,8 @@ struct
   structure LV = LoxValue
   structure Env = Environment
 
+  exception Return of Env.t LV.t * Env.t
+
   fun numberOperand (_, LV.Number n) = n
     | numberOperand (operator, _) =
         raise Error.RuntimeError (operator, "Operand must be a number.")
@@ -25,6 +27,7 @@ struct
                   (Env.new env) (params, args)
             in
               (LV.Nil, executeBlock (body, env))
+              handle Return (value, env) => (value, env)
             end
           val function = LV.Callable
             { arity = length params
@@ -54,6 +57,10 @@ struct
     | execute (Stmt.Print expr, env) =
         let val (value, env) = evaluate (expr, env)
         in (print (LV.toString value ^ "\n"); env)
+        end
+    | execute (Stmt.Return (_, value), env) =
+        let val (value, env) = evaluate (value, env)
+        in raise Return (value, Env.enclosing env)
         end
     | execute (Stmt.While {condition, body}, env) =
         let

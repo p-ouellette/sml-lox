@@ -18,12 +18,6 @@ struct
 
   datatype t = Env of {values: t LV.t M.map, enclosing: t option}
 
-  fun clock (_, env) =
-    (LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ()))), env)
-  val clock = LV.Callable {arity = 0, call = clock, repr = "<native fn>"}
-
-  val base = Env {values = M.singleton ("clock", clock), enclosing = NONE}
-
   fun new enclosing =
     Env {values = M.empty, enclosing = SOME enclosing}
 
@@ -56,12 +50,29 @@ struct
            SOME env => get (env, name)
          | NONE => undefined name)
 
-  fun dump (Env {values, enclosing}) =
-    ( M.appi
-        (fn (name, value) => print (name ^ " = " ^ LV.toString value ^ "\n"))
-        values
-    ; case enclosing of
-        SOME env => dump env
-      | NONE => ()
-    )
+  fun dump env =
+    let
+      fun dump' (Env {values, enclosing}, level) =
+        ( case enclosing of
+            SOME env => dump' (env, level - 1)
+          | NONE => ()
+        ; print ("level " ^ Int.toString level ^ "\n")
+        ; M.appi
+            (fn (name, value) => print (name ^ " = " ^ LV.toString value ^ "\n"))
+            values
+        )
+    in
+      dump' (env, 0)
+    end
+
+  fun clock (_, env) =
+    (LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ()))), env)
+  val clock = LV.Callable {arity = 0, call = clock, repr = "<native fn>"}
+
+  fun env (_, env) =
+    (dump env; (LV.Nil, env))
+  val env = LV.Callable {arity = 0, call = env, repr = "<native fn>"}
+
+  val globals = [("clock", clock), ("env", env)]
+  val base = Env {values = foldl M.insert' M.empty globals, enclosing = NONE}
 end

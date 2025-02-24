@@ -8,17 +8,19 @@ sig
   val define: t * string * t LoxValue.t -> t
   val assign: t * SourceToken.t * t LoxValue.t -> t
   val get: t * SourceToken.t -> t LoxValue.t
+  val dump: t -> unit
 end =
 struct
+  structure LV = LoxValue
   structure M =
     RedBlackMapFn
       (struct type ord_key = string val compare = String.compare end)
 
-  datatype t = Env of {values: t LoxValue.t M.map, enclosing: t option}
+  datatype t = Env of {values: t LV.t M.map, enclosing: t option}
 
   fun clock (_, env) =
-    (LoxValue.Number (Real.fromLargeInt (Time.toSeconds (Time.now ()))), env)
-  val clock = LoxValue.Callable {arity = 0, call = clock, repr = "<native fn>"}
+    (LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ()))), env)
+  val clock = LV.Callable {arity = 0, call = clock, repr = "<native fn>"}
 
   val base = Env {values = M.singleton ("clock", clock), enclosing = NONE}
 
@@ -53,4 +55,13 @@ struct
         (case enclosing of
            SOME env => get (env, name)
          | NONE => undefined name)
+
+  fun dump (Env {values, enclosing}) =
+    ( M.appi
+        (fn (name, value) => print (name ^ " = " ^ LV.toString value ^ "\n"))
+        values
+    ; case enclosing of
+        SOME env => dump env
+      | NONE => ()
+    )
 end

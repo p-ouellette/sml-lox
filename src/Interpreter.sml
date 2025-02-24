@@ -15,9 +15,28 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Var {name = {lexeme, ...}, initializer}, env) =
+  fun execute (Stmt.Function {name, params, body}, env) =
+        let
+          fun call (args, env) =
+            let
+              val env =
+                ListPair.foldlEq
+                  (fn (param, arg, env) => Env.define (env, #lexeme param, arg))
+                  (Env.new env) (params, args)
+            in
+              (LV.Nil, executeBlock (body, env))
+            end
+          val function = LV.Callable
+            { arity = length params
+            , call = call
+            , repr = "<fn " ^ #lexeme name ^ ">"
+            }
+        in
+          Env.define (env, #lexeme name, function)
+        end
+    | execute (Stmt.Var {name, initializer}, env) =
         let val (value, env) = evaluate (initializer, env)
-        in Env.define (env, lexeme, value)
+        in Env.define (env, #lexeme name, value)
         end
     | execute (Stmt.Expression expr, env) =
         let val (_, env) = evaluate (expr, env)
@@ -46,7 +65,10 @@ struct
           loop env
         end
     | execute (Stmt.Block stmts, env) =
-        Env.enclosing (foldl execute (Env.new env) stmts)
+        executeBlock (stmts, Env.new env)
+
+  and executeBlock (stmts, env) =
+    Env.enclosing (foldl execute env stmts)
 
   and evaluate (expr, env) =
     let
@@ -71,16 +93,13 @@ struct
 
   and callExpr ({callee, paren, arguments}, env) =
     let
-      fun evalArgs ([], env) = ([], env)
-        | evalArgs (arg :: args, env) =
-            let
-              val (arg, env) = evaluate (arg, env)
-              val (args, env) = evalArgs (args, env)
-            in
-              (arg :: args, env)
-            end
+      fun evalArg (arg, (args, env)) =
+        let val (arg, env) = evaluate (arg, env)
+        in (arg :: args, env)
+        end
       val (callee, env) = evaluate (callee, env)
-      val (args, env) = evalArgs (arguments, env)
+      val (args, env) = foldl evalArg ([], env) arguments
+      val args = rev args
     in
       case callee of
         LV.Callable {arity, call, ...} =>

@@ -93,13 +93,14 @@ struct
         let
           val (name, sts) =
             consume (T.IDENTIFIER, "Expect parameter name.", sts)
+          val params = name :: params
         in
           if length params >= 255 then
             ignore (error (hd sts, "Can't have more than 255 parameters.", sts))
           else
             ();
           case match ([T.COMMA], sts) of
-            SOME (_, sts') => parseParams (name :: params, sts')
+            SOME (_, sts') => parseParams (params, sts')
           | NONE => (rev params, sts)
         end
       val (name, sts) = consume (T.IDENTIFIER, "Expect " ^ kind ^ " name.", sts)
@@ -311,13 +312,14 @@ struct
       fun parseArgs (args, sts) =
         let
           val (arg, sts) = expression sts
+          val args = arg :: args
         in
           if length args >= 255 then
             ignore (error (hd sts, "Can't have more than 255 arguments.", sts))
           else
             ();
           case match ([T.COMMA], sts) of
-            SOME (_, sts') => parseArgs (arg :: args, sts')
+            SOME (_, sts') => parseArgs (args, sts')
           | NONE => (rev args, sts)
         end
       val (arguments, sts) =

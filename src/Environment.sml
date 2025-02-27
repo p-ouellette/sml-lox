@@ -2,9 +2,10 @@ structure Environment :>
 sig
   type t
 
-  val base: t
+  val global: unit -> t
   val new: t -> t
   val enclosing: t -> t
+  val level: t -> int
   val define: t * string * t LoxValue.t -> t
   val assign: t * SourceToken.t * t LoxValue.t -> t
   val get: t * SourceToken.t -> t LoxValue.t
@@ -16,63 +17,78 @@ struct
     RedBlackMapFn
       (struct type ord_key = string val compare = String.compare end)
 
-  datatype t = Env of {values: t LV.t M.map, enclosing: t option}
+  (* The global environment is stored in a mutable reference because a function
+   * in the global scope must have access to variables declared after it.
+   *)
+  datatype t =
+    Outermost of map ref
+  | Inner of map * t
+  withtype map = t LV.t ref M.map
 
-  fun new enclosing =
-    Env {values = M.empty, enclosing = SOME enclosing}
+  fun new enclosing = Inner (M.empty, enclosing)
 
-  fun enclosing (Env {enclosing = SOME env, ...}) = env
+  fun enclosing (Inner (_, env)) = env
     | enclosing _ = raise Fail "no enclosing environment"
 
-  fun insert (Env {values, enclosing}, name, value) =
-    Env {values = M.insert (values, name, value), enclosing = enclosing}
+  fun level (Outermost _) = 0
+    | level (Inner (_, env)) = 1 + level env
 
-  val define = insert
+  fun define (env as Outermost values, name, value) =
+        (values := M.insert (!values, name, ref value); env)
+    | define (Inner (values, enclosing), name, value) =
+        Inner (M.insert (values, name, ref value), enclosing)
 
   fun undefined name =
     raise Error.RuntimeError
       (name, "Undefined variable '" ^ #lexeme name ^ "'.")
 
-  fun assign (env as Env {values, enclosing}, name as {lexeme, ...}, value) =
-    if M.inDomain (values, lexeme) then
-      insert (env, lexeme, value)
-    else
-      case enclosing of
-        SOME env =>
-          Env {values = values, enclosing = SOME (assign (env, name, value))}
-      | NONE => undefined name
-
-  fun get (Env {values, enclosing}, name) =
-    case M.find (values, #lexeme name) of
-      SOME value => value
-    | NONE =>
-        (case enclosing of
-           SOME env => get (env, name)
+  fun getRef (Outermost values, name) =
+        (case M.find (!values, #lexeme name) of
+           SOME v => v
          | NONE => undefined name)
+    | getRef (Inner (values, enclosing), name) =
+        (case M.find (values, #lexeme name) of
+           SOME v => v
+         | NONE => getRef (enclosing, name))
+
+  fun assign (env, name, value) =
+    (getRef (env, name) := value; env)
+
+  fun get (env, name) =
+    !(getRef (env, name))
 
   fun dump env =
     let
-      fun dump' (Env {values, enclosing}, level) =
-        ( case enclosing of
-            SOME env => dump' (env, level - 1)
-          | NONE => ()
-        ; print ("level " ^ Int.toString level ^ "\n")
-        ; M.appi
-            (fn (name, value) => print (name ^ " = " ^ LV.toString value ^ "\n"))
-            values
-        )
+      val values =
+        case env of
+          Outermost values => !values
+        | Inner (values, _) => values
+      val indent = implode (List.tabulate (level env * 2, fn _ => #" "))
     in
-      dump' (env, 0)
+      case env of
+        Outermost _ => ()
+      | Inner (_, env) => dump env;
+      print (indent ^ "level " ^ Int.toString (level env) ^ "\n");
+      M.appi (fn (k, v) => print (indent ^ k ^ " = " ^ LV.toString (!v) ^ "\n"))
+        values
     end
 
-  fun clock (_, env) =
-    (LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ()))), env)
-  val clock = LV.Callable {arity = 0, call = clock, repr = "<native fn>"}
-
-  fun env (_, env) =
-    (dump env; (LV.Nil, env))
-  val env = LV.Callable {arity = 0, call = env, repr = "<native fn>"}
-
-  val globals = [("clock", clock), ("env", env)]
-  val base = Env {values = foldl M.insert' M.empty globals, enclosing = NONE}
+  local
+    val clock = LV.Callable
+      { arity = 0
+      , call = fn _ =>
+          LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
+      , repr = "<native fn>"
+      }
+    val env = LV.Callable
+      { arity = 0
+      , call = fn (_, env) => (dump env; LV.Nil)
+      , repr = "<native fn>"
+      }
+    val builtins = foldl M.insert' M.empty
+      [("clock", ref clock), ("env", ref env)]
+  in
+    fun global () =
+      Outermost (ref builtins)
+  end
 end

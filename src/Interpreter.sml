@@ -7,7 +7,7 @@ struct
   structure LV = LoxValue
   structure Env = Environment
 
-  exception Return of Env.t LV.t * Env.t
+  exception Return of Env.t LV.t
 
   fun numberOperand (_, LV.Number n) = n
     | numberOperand (operator, _) =
@@ -19,23 +19,26 @@ struct
 
   fun execute (Stmt.Function {name, params, body}, env) =
         let
-          fun call (args, env) =
+          val thunk = ref (fn _ => raise Fail "impossible")
+          val function = LV.Callable
+            { arity = length params
+            , call = fn x => !thunk x
+            , repr = "<fn " ^ #lexeme name ^ ">"
+            }
+          val env = Env.define (env, #lexeme name, function)
+          fun call (args, _) =
             let
               val env =
                 ListPair.foldlEq
                   (fn (param, arg, env) => Env.define (env, #lexeme param, arg))
                   (Env.new env) (params, args)
             in
-              (LV.Nil, executeBlock (body, env))
-              handle Return (value, env) => (value, env)
+              (executeBlock (body, env); LV.Nil)
+              handle Return value => value
             end
-          val function = LV.Callable
-            { arity = length params
-            , call = call
-            , repr = "<fn " ^ #lexeme name ^ ">"
-            }
         in
-          Env.define (env, #lexeme name, function)
+          thunk := call;
+          env
         end
     | execute (Stmt.Var {name, initializer}, env) =
         let val (value, env) = evaluate (initializer, env)
@@ -59,8 +62,8 @@ struct
         in (print (LV.toString value ^ "\n"); env)
         end
     | execute (Stmt.Return (_, value), env) =
-        let val (value, env) = evaluate (value, env)
-        in raise Return (value, Env.enclosing env)
+        let val (value, _) = evaluate (value, env)
+        in raise Return value
         end
     | execute (Stmt.While {condition, body}, env) =
         let
@@ -117,7 +120,7 @@ struct
                 ^ Int.toString (length arguments) ^ "."
               )
           else
-            call (args, env)
+            (call (args, env), env)
       | _ =>
           raise Error.RuntimeError
             (paren, "Can only call functions and classes.")

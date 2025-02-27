@@ -6,8 +6,10 @@ sig
   | Boolean of bool
   | Number of real
   | String of string
-  (* call (args, env) evaluates the call and updates the environment. *)
-  | Callable of {arity: int, call: 'a t list * 'a -> 'a t * 'a, repr: string}
+  (* `call (args, env)` returns the value produced by the call.
+   * `env` is the environment before the call.
+   *)
+  | Callable of {arity: int, call: 'a t list * 'a -> 'a t, repr: string}
 
   val isTruthy: 'a t -> bool
   val isEqual: 'a t * 'a t -> bool
@@ -19,7 +21,7 @@ struct
   | Boolean of bool
   | Number of real
   | String of string
-  | Callable of {arity: int, call: 'a t list * 'a -> 'a t * 'a, repr: string}
+  | Callable of {arity: int, call: 'a t list * 'a -> 'a t, repr: string}
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false

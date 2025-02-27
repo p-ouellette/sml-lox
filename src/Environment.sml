@@ -6,9 +6,9 @@ sig
   val new: t -> t
   val enclosing: t -> t
   val level: t -> int
-  val define: t * string * t LoxValue.t -> t
-  val assign: t * SourceToken.t * t LoxValue.t -> t
-  val get: t * SourceToken.t -> t LoxValue.t
+  val define: t * string * LoxValue.t -> t
+  val assign: t * SourceToken.t * LoxValue.t -> t
+  val get: t * SourceToken.t -> LoxValue.t
   val dump: t -> unit
 end =
 struct
@@ -21,7 +21,18 @@ struct
   datatype t =
     Outermost of map ref
   | Inner of map * t
-  withtype map = t LV.t ref M.map
+  withtype map = LV.t ref M.map
+
+  val clock = LV.Callable
+    { arity = 0
+    , call = fn _ =>
+        LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
+    , repr = "<native fn>"
+    }
+  val builtins = M.singleton ("clock", ref clock)
+
+  fun global () =
+    Outermost (ref builtins)
 
   fun new enclosing = Inner (M.empty, enclosing)
 
@@ -70,23 +81,4 @@ struct
       M.appi (fn (k, v) => print (indent ^ k ^ " = " ^ LV.toString (!v) ^ "\n"))
         values
     end
-
-  local
-    val clock = LV.Callable
-      { arity = 0
-      , call = fn _ =>
-          LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
-      , repr = "<native fn>"
-      }
-    val env = LV.Callable
-      { arity = 0
-      , call = fn (_, env) => (dump env; LV.Nil)
-      , repr = "<native fn>"
-      }
-    val builtins = foldl M.insert' M.empty
-      [("clock", ref clock), ("env", ref env)]
-  in
-    fun global () =
-      Outermost (ref builtins)
-  end
 end

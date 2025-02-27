@@ -7,7 +7,7 @@ struct
   structure LV = LoxValue
   structure Env = Environment
 
-  exception Return of Env.t LV.t
+  exception Return of LV.t
 
   fun numberOperand (_, LV.Number n) = n
     | numberOperand (operator, _) =
@@ -26,7 +26,7 @@ struct
             , repr = "<fn " ^ #lexeme name ^ ">"
             }
           val env = Env.define (env, #lexeme name, function)
-          fun call (args, _) =
+          fun call args =
             let
               val env =
                 ListPair.foldlEq
@@ -120,7 +120,7 @@ struct
                 ^ Int.toString (length arguments) ^ "."
               )
           else
-            (call (args, env), env)
+            (call args, env)
       | _ =>
           raise Error.RuntimeError
             (paren, "Can only call functions and classes.")

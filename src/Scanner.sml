@@ -115,12 +115,9 @@ struct
          | (#"\n", cs) => scanToken cs
          | (#"\"", cs) => string cs
          | (c, cs) =>
-          if Char.isDigit c then
-            number cs
-          else if Char.isAlpha c then
-            identifier cs
-          else
-            (Error.error (line, "Unexpected character: " ^ str c); scanToken cs)
+          if Char.isDigit c then number cs
+          else if Char.isAlpha c then identifier cs
+          else (Error.error (line, "Unexpected character."); scanToken cs)
     in
       Option.mapPartial scan (getc cs)
     end

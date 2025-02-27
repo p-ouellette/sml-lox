@@ -21,6 +21,7 @@ struct
       val tokens = Scanner.scanTokens prog
       val statements = Parser.parse tokens
     in
+      if ! Error.hadError then env else (Resolver.resolve statements; env);
       if ! Error.hadError then env else Interpreter.interpret (statements, env)
     end
     handle Error.ParserError _ => env

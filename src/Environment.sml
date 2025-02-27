@@ -13,9 +13,7 @@ sig
 end =
 struct
   structure LV = LoxValue
-  structure M =
-    RedBlackMapFn
-      (struct type ord_key = string val compare = String.compare end)
+  structure M = StringRedBlackMap
 
   (* The global environment is stored in a mutable reference because a function
    * in the global scope must have access to variables declared after it.

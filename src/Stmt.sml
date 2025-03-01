@@ -1,20 +1,4 @@
-structure Stmt:
-sig
-  datatype t =
-  (* declarations *)
-    Class of {name: SourceToken.t, methods: function list}
-  | Function of function
-  | Var of {name: SourceToken.t, initializer: Expr.t}
-  (* statements *)
-  | Expression of Expr.t
-  | If of {condition: Expr.t, thenBranch: t, elseBranch: t option}
-  | Print of Expr.t
-  | Return of SourceToken.t * Expr.t
-  | While of {condition: Expr.t, body: t}
-  | Block of t list
-  withtype function =
-    {name: SourceToken.t, params: SourceToken.t list, body: t list}
-end =
+structure Stmt =
 struct
   datatype t =
     Class of {name: SourceToken.t, methods: function list}

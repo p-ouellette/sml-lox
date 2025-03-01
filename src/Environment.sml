@@ -18,12 +18,10 @@ struct
   (* The global environment is stored in a mutable reference because a function
    * in the global scope must have access to variables declared after it.
    *)
-  datatype t =
-    Outermost of map ref
-  | Inner of map * t
-  withtype map = LV.t ref M.map
+  type map = LV.t ref M.map
+  datatype t = Outermost of map ref | Inner of map * t
 
-  val clock = LV.Callable
+  val clock = LV.Function
     { arity = 0
     , call = fn _ =>
         LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))

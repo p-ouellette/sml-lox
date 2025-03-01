@@ -17,15 +17,18 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Function {name, params, body}, env) =
+  fun execute (Stmt.Class {name = {lexeme, ...}, methods = _}, env) =
         let
           val thunk = ref (fn _ => raise Fail "impossible")
-          val function = LV.Callable
-            { arity = length params
-            , call = fn x => !thunk x
-            , repr = "<fn " ^ #lexeme name ^ ">"
-            }
-          val env = Env.define (env, #lexeme name, function)
+          val class = {name = lexeme, arity = 0, call = fn x => !thunk x}
+          fun call _ = LV.Instance {class = class}
+        in
+          thunk := call;
+          Env.define (env, lexeme, LV.Class class)
+        end
+    | execute (Stmt.Function {name, params, body}, env) =
+        let
+          val env = Env.define (env, #lexeme name, LV.Nil)
           fun call args =
             let
               val env =
@@ -36,9 +39,11 @@ struct
               (executeBlock (body, env); LV.Nil)
               handle Return value => value
             end
+          val repr = "<fn " ^ #lexeme name ^ ">"
+          val function =
+            LV.Function {arity = length params, call = call, repr = repr}
         in
-          thunk := call;
-          env
+          Env.assign (env, name, function)
         end
     | execute (Stmt.Var {name, initializer}, env) =
         let val (value, env) = evaluate (initializer, env)
@@ -110,20 +115,22 @@ struct
       val (callee, env) = evaluate (callee, env)
       val (args, env) = foldl evalArg ([], env) arguments
       val args = rev args
-    in
-      case callee of
-        LV.Callable {arity, call, ...} =>
-          if arity <> length arguments then
+      val (arity, call) =
+        case callee of
+          LV.Function {arity, call, ...} => (arity, call)
+        | LV.Class {arity, call, ...} => (arity, call)
+        | _ =>
             raise Error.RuntimeError
-              ( paren
-              , "Expected " ^ Int.toString arity ^ " arguments but got "
-                ^ Int.toString (length arguments) ^ "."
-              )
-          else
-            (call args, env)
-      | _ =>
-          raise Error.RuntimeError
-            (paren, "Can only call functions and classes.")
+              (paren, "Can only call functions and classes.")
+    in
+      if arity <> length arguments then
+        raise Error.RuntimeError
+          ( paren
+          , "Expected " ^ Int.toString arity ^ " arguments but got "
+            ^ Int.toString (length arguments) ^ "."
+          )
+      else
+        (call args, env)
     end
 
   and unaryExpr ((operator, right), env) =

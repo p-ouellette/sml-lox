@@ -10,4 +10,9 @@ load it into the SML/NJ REPL.
 
 Currently passes the [test suite][test-suite] for chapter 11.
 
+## Notes
+
+- function, class, and instance values always compare false
+  - fix by making them ref types
+
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

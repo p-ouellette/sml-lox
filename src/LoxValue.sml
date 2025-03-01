@@ -5,7 +5,10 @@ sig
   | Boolean of bool
   | Number of real
   | String of string
-  | Callable of {arity: int, call: t list -> t, repr: string}
+  | Function of {arity: int, call: t list -> t, repr: string}
+  | Class of class
+  | Instance of {class: class}
+  withtype class = {name: string, arity: int, call: t list -> t}
 
   val isTruthy: t -> bool
   val isEqual: t * t -> bool
@@ -17,7 +20,10 @@ struct
   | Boolean of bool
   | Number of real
   | String of string
-  | Callable of {arity: int, call: t list -> t, repr: string}
+  | Function of {arity: int, call: t list -> t, repr: string}
+  | Class of class
+  | Instance of {class: class}
+  withtype class = {name: string, arity: int, call: t list -> t}
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false
@@ -51,5 +57,7 @@ struct
     | toString (Boolean b) = Bool.toString b
     | toString (Number n) = numberToString n
     | toString (String s) = s
-    | toString (Callable f) = #repr f
+    | toString (Function f) = #repr f
+    | toString (Class c) = #name c
+    | toString (Instance i) = #name (#class i) ^ " instance"
 end

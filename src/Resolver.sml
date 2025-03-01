@@ -27,7 +27,9 @@ struct
     | define (s :: ss, name: SourceToken.t) =
         M.insert (s, #lexeme name, true) :: ss
 
-  fun resolveStmt _ (Stmt.Function {name, params, body}, ss) =
+  fun resolveStmt _ (Stmt.Class {name, methods = _}, ss) =
+        define (declare (ss, name), name)
+    | resolveStmt _ (Stmt.Function {name, params, body}, ss) =
         let val ss = define (declare (ss, name), name)
         in resolveFunction (params, body, ss, FunctionType.FUNCTION)
         end

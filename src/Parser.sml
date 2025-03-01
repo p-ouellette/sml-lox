@@ -73,7 +73,7 @@ struct
     end
     handle Error.ParserError sts' => (decs, syncronize sts')
 
-  (* declaration -> funDecl | varDecl | statement
+  (* declaration -> classDecl | funDecl | varDecl | statement
    * funDecl -> "fun" function
    *)
   and declaration sts =
@@ -81,9 +81,33 @@ struct
       val (st, sts') = advance sts
     in
       case #token st of
-        T.FUN => function ("function", sts')
+        T.CLASS => classDeclaration sts'
+      | T.FUN =>
+          let val (func, sts') = function ("function", sts')
+          in (Stmt.Function func, sts')
+          end
       | T.VAR => varDeclaration sts'
       | _ => statement sts
+    end
+
+  (* classDecl -> "class" IDENTIFIER "{" function* "}" *)
+  and classDeclaration sts =
+    let
+      fun parseMethods (acc, sts) =
+        if check ([T.RIGHT_BRACE, T.EOF], sts) then
+          (rev acc, sts)
+        else
+          let val (method, sts) = function ("method", sts)
+          in parseMethods (method :: acc, sts)
+          end
+      val (name, sts) = consume (T.IDENTIFIER, "Expect class name.", sts)
+      val (_, sts) = consume
+        (T.LEFT_BRACE, "Expect '{' before class body.", sts)
+      val (methods, sts) = parseMethods ([], sts)
+      val (_, sts) = consume
+        (T.RIGHT_BRACE, "Expect '}' after class body.", sts)
+    in
+      (Stmt.Class {name = name, methods = methods}, sts)
     end
 
   (* function -> IDENTIFIER "(" parameters? ")" block *)
@@ -115,7 +139,7 @@ struct
         (T.LEFT_BRACE, "Expect '{' before " ^ kind ^ " body.", sts)
       val (body, sts) = block ([], sts)
     in
-      (Stmt.Function {name = name, params = params, body = body}, sts)
+      ({name = name, params = params, body = body}, sts)
     end
 
   (* varDecl -> "var" IDENTIFIER ( "=" expression )? ";" *)

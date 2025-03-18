@@ -3,3 +3,5 @@ version = 1
 root = "src/lox.mlb"
 [diagnostics]
 5043.severity = "ignore"
+[language]
+successor-ml.sig-withtype = true

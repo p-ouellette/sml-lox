@@ -95,6 +95,7 @@ struct
             (Env.get (env, name), env)
         | eval (Expr.Grouping expr) = evaluate (expr, env)
         | eval (Expr.Call x) = callExpr (x, env)
+        | eval (Expr.Get x) = getExpr (x, env)
         | eval (Expr.Unary x) = unaryExpr (x, env)
         | eval (Expr.Binary x) = binaryExpr (x, env)
         | eval (Expr.Logical x) = logicalExpr (x, env)
@@ -131,6 +132,15 @@ struct
           )
       else
         (call args, env)
+    end
+
+  and getExpr ((object, name), env) =
+    let
+      val (object, env) = evaluate (object, env)
+    in
+      case object of
+        LV.Instance {fields, ...} => _
+      | _ => raise Error.RuntimeError (name, "Only instances have properties.")
     end
 
   and unaryExpr ((operator, right), env) =

@@ -334,13 +334,24 @@ struct
         end
     | NONE => call sts
 
-  (* call -> primary ( "(" arguments? ")" )* *)
+  (* call -> primary ( "(" arguments? ")" | "." IDENTIFIER )* *)
   and call sts =
     let
       fun tail (expr, sts) =
-        case match ([T.LEFT_PAREN], sts) of
-          SOME (_, sts) => tail (finishCall (expr, sts))
-        | NONE => (expr, sts)
+        let
+          val (st, sts') = advance sts
+        in
+          case #token st of
+            T.LEFT_PAREN => tail (finishCall (expr, sts'))
+          | T.DOT =>
+              let
+                val (name, sts') = consume
+                  (T.IDENTIFIER, "Expect property name after '.'.", sts)
+              in
+                tail (Expr.Get (expr, name), sts')
+              end
+          | _ => (expr, sts)
+        end
     in
       tail (primary sts)
     end

@@ -8,6 +8,7 @@ struct
   | Variable of SourceToken.t
   | Grouping of t
   | Call of {callee: t, paren: SourceToken.t, arguments: t list}
+  | Get of t * SourceToken.t
   | Unary of SourceToken.t * t
   | Binary of t * SourceToken.t * t
   | Logical of t * SourceToken.t * t

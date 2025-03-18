@@ -85,6 +85,7 @@ struct
     | resolveExpr (Expr.Grouping expr, ss) = resolveExpr (expr, ss)
     | resolveExpr (Expr.Call {callee, arguments, ...}, ss) =
         foldl resolveExpr (resolveExpr (callee, ss)) arguments
+    | resolveExpr (Expr.Get (expr, _), ss) = resolveExpr (expr, ss)
     | resolveExpr (Expr.Unary (_, right), ss) = resolveExpr (right, ss)
     | resolveExpr (Expr.Binary (left, _, right), ss) =
         resolveExpr (right, resolveExpr (left, ss))

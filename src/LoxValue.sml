@@ -59,5 +59,6 @@ struct
     | toString (String s) = s
     | toString (Function f) = #repr f
     | toString (Class c) = #name c
-    | toString (Instance i) = #name (#class i) ^ " instance"
+    | toString (Instance i) =
+        #name (#class i) ^ " instance"
 end

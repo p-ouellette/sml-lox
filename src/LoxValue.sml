@@ -7,7 +7,7 @@ sig
   | String of string
   | Function of {arity: int, call: t list -> t, repr: string}
   | Class of class
-  | Instance of {class: class}
+  | Instance of {class: class, fields: t StringMap.map}
   withtype class = {name: string, arity: int, call: t list -> t}
 
   val isTruthy: t -> bool
@@ -22,7 +22,7 @@ struct
   | String of string
   | Function of {arity: int, call: t list -> t, repr: string}
   | Class of class
-  | Instance of {class: class}
+  | Instance of {class: class, fields: t StringMap.map}
   withtype class = {name: string, arity: int, call: t list -> t}
 
   fun isTruthy Nil = false

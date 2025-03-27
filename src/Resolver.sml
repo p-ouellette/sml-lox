@@ -6,7 +6,7 @@ sig
   val resolve: Stmt.t list -> unit
 end =
 struct
-  structure M = StringRedBlackMap
+  structure M = StringMap
 
   structure FunctionType = struct datatype t = NONE | FUNCTION end
 

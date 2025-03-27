@@ -2,7 +2,7 @@ Group is
 
 $/basis.cm
 $/smlnj-lib.cm
-StringRedBlackMap.sml
+StringMap.sml
 Token.sml
 SourceToken.sml
 Error.sml

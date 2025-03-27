@@ -21,7 +21,7 @@ struct
         let
           val thunk = ref (fn _ => raise Fail "impossible")
           val class = {name = lexeme, arity = 0, call = fn x => !thunk x}
-          fun call _ = LV.Instance {class = class}
+          fun call _ = LV.Instance {class = class, fields = StringMap.empty}
         in
           thunk := call;
           Env.define (env, lexeme, LV.Class class)
@@ -139,7 +139,12 @@ struct
       val (object, env) = evaluate (object, env)
     in
       case object of
-        LV.Instance {fields, ...} => _
+        LV.Instance {fields, ...} =>
+          (case StringMap.find (fields, #lexeme name) of
+             SOME v => (v, env)
+           | NONE =>
+               raise Error.RuntimeError
+                 (name, "Undefined property '" ^ #lexeme name ^ "'."))
       | _ => raise Error.RuntimeError (name, "Only instances have properties.")
     end
 

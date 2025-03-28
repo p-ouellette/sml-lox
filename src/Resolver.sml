@@ -91,6 +91,8 @@ struct
         resolveExpr (right, resolveExpr (left, ss))
     | resolveExpr (Expr.Logical (left, _, right), ss) =
         resolveExpr (right, resolveExpr (left, ss))
+    | resolveExpr (Expr.Set (object, _, value), ss) =
+        resolveExpr (value, resolveExpr (object, ss))
     | resolveExpr (Expr.Assign (_, value), ss) = resolveExpr (value, ss)
 
   and resolve stmts =

@@ -289,7 +289,7 @@ struct
 
   and expression sts = assignment sts
 
-  (* assignment -> IDENTIFIER "=" assignment | logic_or *)
+  (* assignment -> ( call "." )? IDENTIFIER "=" assignment | logic_or *)
   and assignment sts =
     let
       val (expr, sts) = or sts
@@ -301,6 +301,7 @@ struct
           in
             case expr of
               Expr.Variable name => (Expr.Assign (name, value), sts)
+            | Expr.Get (object, name) => (Expr.Set (object, name, value), sts)
             | _ =>
                 (error (equals, "Invalid assignment target.", sts); (expr, sts))
           end

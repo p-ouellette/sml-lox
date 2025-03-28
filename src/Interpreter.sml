@@ -99,6 +99,7 @@ struct
         | eval (Expr.Unary x) = unaryExpr (x, env)
         | eval (Expr.Binary x) = binaryExpr (x, env)
         | eval (Expr.Logical x) = logicalExpr (x, env)
+        | eval (Expr.Set x) = setExpr (x, env)
         | eval (Expr.Assign (name, value)) =
             let val (value, env) = evaluate (value, env)
             in (value, Env.assign (env, name, value))
@@ -139,12 +140,7 @@ struct
       val (object, env) = evaluate (object, env)
     in
       case object of
-        LV.Instance {fields, ...} =>
-          (case StringMap.find (fields, #lexeme name) of
-             SOME v => (v, env)
-           | NONE =>
-               raise Error.RuntimeError
-                 (name, "Undefined property '" ^ #lexeme name ^ "'."))
+        LV.Instance x => (LV.instanceGet (x, name), env)
       | _ => raise Error.RuntimeError (name, "Only instances have properties.")
     end
 
@@ -192,6 +188,18 @@ struct
         T.OR => if LV.isTruthy left then (left, env) else evaluate (right, env)
       | T.AND => if LV.isTruthy left then evaluate (right, env) else (left, env)
       | _ => raise Fail "invalid logical operator"
+    end
+
+  and setExpr ((object, name, value), env) =
+    let
+      val (object, env) = evaluate (object, env)
+      val object =
+        case object of
+          LV.Instance x => x
+        | _ => raise Error.RuntimeError (name, "Only instances have fields.")
+      val (value, env) = evaluate (value, env)
+    in
+      (LV.instanceSet (object, name, value), env)
     end
 
   fun interpret (statements, env) =

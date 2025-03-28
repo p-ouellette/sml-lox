@@ -12,5 +12,6 @@ struct
   | Unary of SourceToken.t * t
   | Binary of t * SourceToken.t * t
   | Logical of t * SourceToken.t * t
+  | Set of t * SourceToken.t * t
   | Assign of SourceToken.t * t
 end

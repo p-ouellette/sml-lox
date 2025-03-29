@@ -8,7 +8,7 @@ end =
 struct
   structure M = StringMap
 
-  structure FunctionType = struct datatype t = NONE | FUNCTION end
+  structure FunctionType = struct datatype t = NONE | FUNCTION | METHOD end
 
   fun beginScope scopes = M.empty :: scopes
   fun endScope scopes = tl scopes
@@ -27,11 +27,13 @@ struct
     | define (s :: ss, name: SourceToken.t) =
         M.insert (s, #lexeme name, true) :: ss
 
-  fun resolveStmt _ (Stmt.Class {name, methods = _}, ss) =
-        define (declare (ss, name), name)
-    | resolveStmt _ (Stmt.Function {name, params, body}, ss) =
+  fun resolveStmt _ (Stmt.Class {name, methods}, ss) =
         let val ss = define (declare (ss, name), name)
-        in resolveFunction (params, body, ss, FunctionType.FUNCTION)
+        in foldl (resolveFunction FunctionType.METHOD) ss methods
+        end
+    | resolveStmt _ (Stmt.Function f, ss) =
+        let val ss = define (declare (ss, #name f), #name f)
+        in resolveFunction FunctionType.FUNCTION (f, ss)
         end
     | resolveStmt _ (Stmt.Var {name, initializer}, ss) =
         let val ss = resolveExpr (initializer, declare (ss, name))
@@ -60,7 +62,7 @@ struct
     | resolveStmt func (Stmt.Block stmts, ss) =
         endScope (resolveStmts (stmts, beginScope ss, func))
 
-  and resolveFunction (params, body, ss, func) =
+  and resolveFunction func ({params, body, ...}, ss) =
     let
       val ss = beginScope ss
       val ss = foldl (fn (p, ss) => define (declare (ss, p), p)) ss params

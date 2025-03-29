@@ -6,7 +6,7 @@ sig
   val new: t -> t
   val enclosing: t -> t
   val level: t -> int
-  val define: t * string * LoxValue.t -> t
+  val define: t * SourceToken.t * LoxValue.t -> t
   val assign: t * SourceToken.t * LoxValue.t -> t
   val get: t * SourceToken.t -> LoxValue.t
   val dump: t -> unit
@@ -40,10 +40,10 @@ struct
   fun level (Outermost _) = 0
     | level (Inner (_, env)) = 1 + level env
 
-  fun define (env as Outermost values, name, value) =
-        (values := M.insert (!values, name, ref value); env)
+  fun define (env as Outermost values, name: SourceToken.t, value) =
+        (values := M.insert (!values, #lexeme name, ref value); env)
     | define (Inner (values, enclosing), name, value) =
-        Inner (M.insert (values, name, ref value), enclosing)
+        Inner (M.insert (values, #lexeme name, ref value), enclosing)
 
   fun undefined name =
     raise Error.RuntimeError

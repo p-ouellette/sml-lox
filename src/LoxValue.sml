@@ -8,8 +8,14 @@ sig
   | Function of {arity: int, call: t list -> t, repr: string}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map}
-  withtype class = {name: string, arity: int, call: t list -> t}
+  withtype class =
+    { name: string
+    , arity: int
+    , call: t list -> t
+    , methods: {arity: int, call: t list -> t, repr: string} StringMap.map
+    }
 
+  type function = {arity: int, call: t list -> t, repr: string}
   type instance = {class: class, fields: t StringMap.map}
 
   val isTruthy: t -> bool
@@ -27,8 +33,14 @@ struct
   | Function of {arity: int, call: t list -> t, repr: string}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map}
-  withtype class = {name: string, arity: int, call: t list -> t}
+  withtype class =
+    { name: string
+    , arity: int
+    , call: t list -> t
+    , methods: {arity: int, call: t list -> t, repr: string} StringMap.map
+    }
 
+  type function = {arity: int, call: t list -> t, repr: string}
   type instance = {class: class, fields: t StringMap.map}
 
   fun isTruthy Nil = false

@@ -17,37 +17,31 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Class {name = {lexeme, ...}, methods = _}, env) =
+  fun execute (Stmt.Class {name, methods}, env) =
         let
-          val thunk = ref (fn _ => raise Fail "impossible")
-          val class = {name = lexeme, arity = 0, call = fn x => !thunk x}
+          fun insertMethod (f, methods) =
+            let val (f, _) = executeFunDecl (f, env)
+            in StringMap.insert (methods, #lexeme name, f)
+            end
+          val callThunk = ref (fn _ => raise Fail "impossible")
+          val class =
+            { name = #lexeme name
+            , arity = 0
+            , call = fn x => !callThunk x
+            , methods = foldl insertMethod StringMap.empty methods
+            }
           fun call _ = LV.Instance {class = class, fields = StringMap.empty}
         in
-          thunk := call;
-          Env.define (env, lexeme, LV.Class class)
+          callThunk := call;
+          Env.define (env, name, LV.Class class)
         end
-    | execute (Stmt.Function {name, params, body}, env) =
-        let
-          val env = Env.define (env, #lexeme name, LV.Nil)
-          fun call args =
-            let
-              val env =
-                ListPair.foldlEq
-                  (fn (param, arg, env) => Env.define (env, #lexeme param, arg))
-                  (Env.new env) (params, args)
-            in
-              (executeBlock (body, env); LV.Nil)
-              handle Return value => value
-            end
-          val repr = "<fn " ^ #lexeme name ^ ">"
-          val function =
-            LV.Function {arity = length params, call = call, repr = repr}
-        in
-          Env.assign (env, name, function)
+    | execute (Stmt.Function f, env) =
+        let val (_, env) = executeFunDecl (f, env)
+        in env
         end
     | execute (Stmt.Var {name, initializer}, env) =
         let val (value, env) = evaluate (initializer, env)
-        in Env.define (env, #lexeme name, value)
+        in Env.define (env, name, value)
         end
     | execute (Stmt.Expression expr, env) =
         let val (_, env) = evaluate (expr, env)
@@ -81,6 +75,25 @@ struct
         end
     | execute (Stmt.Block stmts, env) =
         executeBlock (stmts, Env.new env)
+
+  and executeFunDecl ({name, params, body}, env) =
+    let
+      val env = Env.define (env, name, LV.Nil)
+      fun call args =
+        let
+          val env =
+            ListPair.foldlEq
+              (fn (param, arg, env) => Env.define (env, param, arg))
+              (Env.new env) (params, args)
+        in
+          (executeBlock (body, env); LV.Nil)
+          handle Return value => value
+        end
+      val repr = "<fn " ^ #lexeme name ^ ">"
+      val function = {arity = length params, call = call, repr = repr}
+    in
+      (function, Env.assign (env, name, LV.Function function))
+    end
 
   and executeBlock (stmts, env) =
     Env.enclosing (foldl execute env stmts)

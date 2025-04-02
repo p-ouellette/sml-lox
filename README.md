@@ -12,6 +12,7 @@ Currently passes the [test suite][test-suite] for chapter 11.
 
 ## Notes
 
+- add LoxClass structure?
 - function, class, and instance values always compare not equal
   - fix by making them ref types
 

@@ -347,7 +347,7 @@ struct
           | T.DOT =>
               let
                 val (name, sts') = consume
-                  (T.IDENTIFIER, "Expect property name after '.'.", sts)
+                  (T.IDENTIFIER, "Expect property name after '.'.", sts')
               in
                 tail (Expr.Get (expr, name), sts')
               end

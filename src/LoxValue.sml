@@ -80,12 +80,15 @@ struct
     | toString (Instance i) =
         #name (#class i) ^ " instance"
 
-  fun instanceGet ({class = _, fields}, name) =
+  fun instanceGet ({class, fields}: instance, name) =
     case StringMap.find (fields, #lexeme name) of
-      SOME v => v
+      SOME value => value
     | NONE =>
-        raise Error.RuntimeError
-          (name, "Undefined property '" ^ #lexeme name ^ "'.")
+        (case StringMap.find (#methods class, #lexeme name) of
+           SOME func => Function func
+         | NONE =>
+             raise Error.RuntimeError
+               (name, "Undefined property '" ^ #lexeme name ^ "'."))
 
   fun instanceSet ({class, fields}, name: SourceToken.t, value) =
     Instance

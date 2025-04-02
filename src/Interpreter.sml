@@ -19,9 +19,9 @@ struct
 
   fun execute (Stmt.Class {name, methods}, env) =
         let
-          fun insertMethod (f, methods) =
-            let val (f, _) = executeFunDecl (f, env)
-            in StringMap.insert (methods, #lexeme name, f)
+          fun insertMethod (stmt, methods) =
+            let val (func, _) = executeFunDecl (stmt, env)
+            in StringMap.insert (methods, #lexeme (#name stmt), func)
             end
           val callThunk = ref (fn _ => raise Fail "impossible")
           val class =

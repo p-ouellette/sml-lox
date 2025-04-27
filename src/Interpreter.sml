@@ -1,6 +1,8 @@
 structure Interpreter:
 sig
-  val interpret: Stmt.t list * Environment.t -> Environment.t
+  val baseEnv: unit -> LoxValue.t Environment.t
+  val interpret: Stmt.t list * LoxValue.t Environment.t
+                 -> LoxValue.t Environment.t
 end =
 struct
   structure T = Token
@@ -8,6 +10,16 @@ struct
   structure Env = Environment
 
   exception Return of LV.t
+
+  val clock = LV.Function
+    { arity = 0
+    , call = fn _ =>
+        LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
+    , repr = "<native fn>"
+    }
+
+  fun baseEnv () =
+    Env.define (Env.new NONE, "clock", clock)
 
   fun numberOperand (_, LV.Number n) = n
     | numberOperand (operator, _) =
@@ -33,7 +45,7 @@ struct
           fun call _ = LV.Instance {class = class, fields = StringMap.empty}
         in
           callThunk := call;
-          Env.define (env, name, LV.Class class)
+          Env.define (env, #lexeme name, LV.Class class)
         end
     | execute (Stmt.Function f, env) =
         let val (_, env) = executeFunDecl (f, env)
@@ -41,7 +53,7 @@ struct
         end
     | execute (Stmt.Var {name, initializer}, env) =
         let val (value, env) = evaluate (initializer, env)
-        in Env.define (env, name, value)
+        in Env.define (env, #lexeme name, value)
         end
     | execute (Stmt.Expression expr, env) =
         let val (_, env) = evaluate (expr, env)
@@ -74,17 +86,17 @@ struct
           loop env
         end
     | execute (Stmt.Block stmts, env) =
-        executeBlock (stmts, Env.new env)
+        executeBlock (stmts, Env.new (SOME env))
 
   and executeFunDecl ({name, params, body}, env) =
     let
-      val env = Env.define (env, name, LV.Nil)
+      val env = Env.define (env, #lexeme name, LV.Nil)
       fun call args =
         let
           val env =
             ListPair.foldlEq
-              (fn (param, arg, env) => Env.define (env, param, arg))
-              (Env.new env) (params, args)
+              (fn (param, arg, env) => Env.define (env, #lexeme param, arg))
+              (Env.new (SOME env)) (params, args)
         in
           (executeBlock (body, env); LV.Nil)
           handle Return value => value

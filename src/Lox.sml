@@ -1,8 +1,8 @@
 structure Lox:
 sig
-  val run: string * Environment.t -> Environment.t
+  val run: string * LoxValue.t Environment.t -> LoxValue.t Environment.t
   val runFile: string -> Word8.word
-  val runPrompt: Environment.t -> Word8.word
+  val runPrompt: LoxValue.t Environment.t -> Word8.word
   val main: string list -> Word8.word
 end =
 struct
@@ -32,7 +32,7 @@ struct
       val prog = TIO.inputAll strm
     in
       TIO.closeIn strm;
-      run (prog, Environment.global ());
+      run (prog, Interpreter.baseEnv ());
 
       if ! Error.hadError then Status.parseError
       else if ! Error.hadRuntimeError then Status.runtimeError
@@ -47,7 +47,7 @@ struct
     )
 
   fun main [] =
-        runPrompt (Environment.global ())
+        runPrompt (Interpreter.baseEnv ())
     | main [fname] = runFile fname
     | main _ =
         (print "Usage: lox [script]"; Status.usageError)

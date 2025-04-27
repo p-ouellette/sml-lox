@@ -1,4 +1,4 @@
-structure LoxValue:
+structure Value:
 sig
   datatype t =
     Nil

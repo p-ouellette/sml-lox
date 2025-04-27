@@ -1,31 +1,29 @@
 structure Interpreter:
 sig
-  val baseEnv: unit -> LoxValue.t Environment.t
-  val interpret: Stmt.t list * LoxValue.t Environment.t
-                 -> LoxValue.t Environment.t
+  val baseEnv: unit -> Value.t Environment.t
+  val interpret: Stmt.t list * Value.t Environment.t -> Value.t Environment.t
 end =
 struct
   structure T = Token
-  structure LV = LoxValue
+  structure V = Value
   structure Env = Environment
 
-  exception Return of LV.t
+  exception Return of V.t
 
-  val clock = LV.Function
+  val clock = V.Function
     { arity = 0
-    , call = fn _ =>
-        LV.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
+    , call = fn _ => V.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
     , repr = "<native fn>"
     }
 
   fun baseEnv () =
     Env.define (Env.new NONE, "clock", clock)
 
-  fun numberOperand (_, LV.Number n) = n
+  fun numberOperand (_, V.Number n) = n
     | numberOperand (operator, _) =
         raise Error.RuntimeError (operator, "Operand must be a number.")
 
-  fun numberOperands (_, LV.Number x, LV.Number y) = (x, y)
+  fun numberOperands (_, V.Number x, V.Number y) = (x, y)
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
@@ -42,10 +40,10 @@ struct
             , call = fn x => !callThunk x
             , methods = foldl insertMethod StringMap.empty methods
             }
-          fun call _ = LV.Instance {class = class, fields = StringMap.empty}
+          fun call _ = V.Instance {class = class, fields = StringMap.empty}
         in
           callThunk := call;
-          Env.define (env, #lexeme name, LV.Class class)
+          Env.define (env, #lexeme name, V.Class class)
         end
     | execute (Stmt.Function f, env) =
         let val (_, env) = executeFunDecl (f, env)
@@ -63,14 +61,14 @@ struct
         let
           val (cond, env) = evaluate (condition, env)
         in
-          if LV.isTruthy cond then
+          if V.isTruthy cond then
             execute (thenBranch, env)
           else
             getOpt (Option.map (fn stmt => execute (stmt, env)) elseBranch, env)
         end
     | execute (Stmt.Print expr, env) =
         let val (value, env) = evaluate (expr, env)
-        in (print (LV.toString value ^ "\n"); env)
+        in (print (V.toString value ^ "\n"); env)
         end
     | execute (Stmt.Return (_, value), env) =
         let val (value, _) = evaluate (value, env)
@@ -80,7 +78,7 @@ struct
         let
           fun loop env =
             let val (cond, env) = evaluate (condition, env)
-            in if LV.isTruthy cond then loop (execute (body, env)) else env
+            in if V.isTruthy cond then loop (execute (body, env)) else env
             end
         in
           loop env
@@ -90,7 +88,7 @@ struct
 
   and executeFunDecl ({name, params, body}, env) =
     let
-      val env = Env.define (env, #lexeme name, LV.Nil)
+      val env = Env.define (env, #lexeme name, V.Nil)
       fun call args =
         let
           val env =
@@ -98,13 +96,13 @@ struct
               (fn (param, arg, env) => Env.define (env, #lexeme param, arg))
               (Env.new (SOME env)) (params, args)
         in
-          (executeBlock (body, env); LV.Nil)
+          (executeBlock (body, env); V.Nil)
           handle Return value => value
         end
       val repr = "<fn " ^ #lexeme name ^ ">"
       val function = {arity = length params, call = call, repr = repr}
     in
-      (function, Env.assign (env, name, LV.Function function))
+      (function, Env.assign (env, name, V.Function function))
     end
 
   and executeBlock (stmts, env) =
@@ -112,10 +110,10 @@ struct
 
   and evaluate (expr, env) =
     let
-      fun eval Expr.Nil = (LV.Nil, env)
-        | eval (Expr.Boolean b) = (LV.Boolean b, env)
-        | eval (Expr.Number n) = (LV.Number n, env)
-        | eval (Expr.String s) = (LV.String s, env)
+      fun eval Expr.Nil = (V.Nil, env)
+        | eval (Expr.Boolean b) = (V.Boolean b, env)
+        | eval (Expr.Number n) = (V.Number n, env)
+        | eval (Expr.String s) = (V.String s, env)
         | eval (Expr.Variable name) =
             (Env.get (env, name), env)
         | eval (Expr.Grouping expr) = evaluate (expr, env)
@@ -144,8 +142,8 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          LV.Function {arity, call, ...} => (arity, call)
-        | LV.Class {arity, call, ...} => (arity, call)
+          V.Function {arity, call, ...} => (arity, call)
+        | V.Class {arity, call, ...} => (arity, call)
         | _ =>
             raise Error.RuntimeError
               (paren, "Can only call functions and classes.")
@@ -165,7 +163,7 @@ struct
       val (object, env) = evaluate (object, env)
     in
       case object of
-        LV.Instance x => (LV.instanceGet (x, name), env)
+        V.Instance x => (V.instanceGet (x, name), env)
       | _ => raise Error.RuntimeError (name, "Only instances have properties.")
     end
 
@@ -174,8 +172,8 @@ struct
       val (right, env) = evaluate (right, env)
     in
       case #token operator of
-        T.MINUS => (LV.Number (~(numberOperand (operator, right))), env)
-      | T.BANG => (LV.Boolean (not (LV.isTruthy right)), env)
+        T.MINUS => (V.Number (~(numberOperand (operator, right))), env)
+      | T.BANG => (V.Boolean (not (V.isTruthy right)), env)
       | _ => raise Fail "invalid unary operator"
     end
 
@@ -186,19 +184,19 @@ struct
       fun numOperands () = numberOperands (operator, left, right)
     in
       case #token operator of
-        T.BANG_EQUAL => (LV.Boolean (not (LV.isEqual (left, right))), env)
-      | T.EQUAL_EQUAL => (LV.Boolean (LV.isEqual (left, right)), env)
-      | T.GREATER => (LV.Boolean (op> (numOperands ())), env)
-      | T.GREATER_EQUAL => (LV.Boolean (op>= (numOperands ())), env)
-      | T.LESS => (LV.Boolean (op< (numOperands ())), env)
-      | T.LESS_EQUAL => (LV.Boolean (op<= (numOperands ())), env)
-      | T.MINUS => (LV.Number (op- (numOperands ())), env)
-      | T.SLASH => (LV.Number (op/ (numOperands ())), env)
-      | T.STAR => (LV.Number (op* (numOperands ())), env)
+        T.BANG_EQUAL => (V.Boolean (not (V.isEqual (left, right))), env)
+      | T.EQUAL_EQUAL => (V.Boolean (V.isEqual (left, right)), env)
+      | T.GREATER => (V.Boolean (op> (numOperands ())), env)
+      | T.GREATER_EQUAL => (V.Boolean (op>= (numOperands ())), env)
+      | T.LESS => (V.Boolean (op< (numOperands ())), env)
+      | T.LESS_EQUAL => (V.Boolean (op<= (numOperands ())), env)
+      | T.MINUS => (V.Number (op- (numOperands ())), env)
+      | T.SLASH => (V.Number (op/ (numOperands ())), env)
+      | T.STAR => (V.Number (op* (numOperands ())), env)
       | T.PLUS =>
           (case (left, right) of
-             (LV.Number x, LV.Number y) => (LV.Number (x + y), env)
-           | (LV.String x, LV.String y) => (LV.String (x ^ y), env)
+             (V.Number x, V.Number y) => (V.Number (x + y), env)
+           | (V.String x, V.String y) => (V.String (x ^ y), env)
            | _ =>
                raise Error.RuntimeError
                  (operator, "Operands must be two numbers or two strings."))
@@ -210,8 +208,8 @@ struct
       val (left, env) = evaluate (left, env)
     in
       case #token operator of
-        T.OR => if LV.isTruthy left then (left, env) else evaluate (right, env)
-      | T.AND => if LV.isTruthy left then evaluate (right, env) else (left, env)
+        T.OR => if V.isTruthy left then (left, env) else evaluate (right, env)
+      | T.AND => if V.isTruthy left then evaluate (right, env) else (left, env)
       | _ => raise Fail "invalid logical operator"
     end
 
@@ -220,11 +218,11 @@ struct
       val (object, env) = evaluate (object, env)
       val object =
         case object of
-          LV.Instance x => x
+          V.Instance x => x
         | _ => raise Error.RuntimeError (name, "Only instances have fields.")
       val (value, env) = evaluate (value, env)
     in
-      (LV.instanceSet (object, name, value), env)
+      (V.instanceSet (object, name, value), env)
     end
 
   fun interpret (statements, env) =

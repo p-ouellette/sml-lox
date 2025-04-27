@@ -1,8 +1,8 @@
 structure Lox:
 sig
-  val run: string * LoxValue.t Environment.t -> LoxValue.t Environment.t
+  val run: string * Value.t Environment.t -> Value.t Environment.t
   val runFile: string -> Word8.word
-  val runPrompt: LoxValue.t Environment.t -> Word8.word
+  val runPrompt: Value.t Environment.t -> Word8.word
   val main: string list -> Word8.word
 end =
 struct

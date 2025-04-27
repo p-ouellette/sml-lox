@@ -11,7 +11,7 @@ Expr.sml
 Stmt.sml
 Parser.sml
 Environment.sml
-LoxValue.sml
+Value.sml
 Resolver.sml
 Interpreter.sml
 Lox.sml

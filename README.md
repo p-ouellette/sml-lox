@@ -12,8 +12,6 @@ Currently passes the [test suite][test-suite] for chapter 11.
 
 ## Notes
 
-- change function type to {declaration: Stmt.function, closure: t Environment.t}
-  - needed for bindMethod
 - function, class, and instance values always compare not equal
   - fix by making them ref types
 

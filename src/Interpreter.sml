@@ -10,10 +10,10 @@ struct
 
   exception Return of V.t
 
-  val clock = V.Function
-    { arity = 0
+  val clock = V.Builtin
+    { repr = "<native fn>"
+    , arity = 0
     , call = fn _ => V.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
-    , repr = "<native fn>"
     }
 
   fun baseEnv () =
@@ -86,23 +86,15 @@ struct
     | execute (Stmt.Block stmts, env) =
         executeBlock (stmts, Env.new (SOME env))
 
-  and executeFunDecl ({name, params, body}, env) =
+  and executeFunDecl (declaration, env) =
     let
-      val env = Env.define (env, #lexeme name, V.Nil)
-      fun call args =
-        let
-          val env =
-            ListPair.foldlEq
-              (fn (param, arg, env) => Env.define (env, #lexeme param, arg))
-              (Env.new (SOME env)) (params, args)
-        in
-          (executeBlock (body, env); V.Nil)
-          handle Return value => value
-        end
-      val repr = "<fn " ^ #lexeme name ^ ">"
-      val function = {arity = length params, call = call, repr = repr}
+      (* Define the function in the environment for recursive calls. *)
+      val env = Env.define (env, #lexeme (#name declaration), V.Nil)
+      val function = {declaration = declaration, closure = env}
+      (* Complete the function declaration. *)
+      val env = Env.assign (env, #name declaration, V.Function function)
     in
-      (function, Env.assign (env, name, V.Function function))
+      (function, env)
     end
 
   and executeBlock (stmts, env) =
@@ -142,7 +134,8 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Function {arity, call, ...} => (arity, call)
+          V.Function f => (V.functionArity f, callFunction f)
+        | V.Builtin {arity, call, ...} => (arity, call)
         | V.Class {arity, call, ...} => (arity, call)
         | _ =>
             raise Error.RuntimeError
@@ -156,6 +149,17 @@ struct
           )
       else
         (call args, env)
+    end
+
+  and callFunction {declaration, closure} args =
+    let
+      fun enterParam (param: SourceToken.t, arg, env) =
+        Env.define (env, #lexeme param, arg)
+      val env = Env.new (SOME closure)
+      val env = ListPair.foldlEq enterParam env (#params declaration, args)
+    in
+      (executeBlock (#body declaration, env); V.Nil)
+      handle Return value => value
     end
 
   and getExpr ((object, name), env) =

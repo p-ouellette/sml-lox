@@ -5,24 +5,26 @@ sig
   | Boolean of bool
   | Number of real
   | String of string
-  | Function of {arity: int, call: t list -> t, repr: string}
+  | Builtin of {repr: string, arity: int, call: t list -> t}
+  | Function of {declaration: Stmt.function, closure: t Environment.t}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map}
   withtype class =
     { name: string
     , arity: int
     , call: t list -> t
-    , methods: {arity: int, call: t list -> t, repr: string} StringMap.map
+    , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
     }
 
-  type function = {arity: int, call: t list -> t, repr: string}
+  type function = {declaration: Stmt.function, closure: t Environment.t}
   type instance = {class: class, fields: t StringMap.map}
 
+  val functionArity: function -> int
+  val instanceGet: instance * SourceToken.t -> t
+  val instanceSet: instance * SourceToken.t * t -> t
   val isTruthy: t -> bool
   val isEqual: t * t -> bool
   val toString: t -> string
-  val instanceGet: instance * SourceToken.t -> t
-  val instanceSet: instance * SourceToken.t * t -> t
 end =
 struct
   datatype t =
@@ -30,18 +32,36 @@ struct
   | Boolean of bool
   | Number of real
   | String of string
-  | Function of {arity: int, call: t list -> t, repr: string}
+  | Builtin of {repr: string, arity: int, call: t list -> t}
+  | Function of {declaration: Stmt.function, closure: t Environment.t}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map}
   withtype class =
     { name: string
     , arity: int
     , call: t list -> t
-    , methods: {arity: int, call: t list -> t, repr: string} StringMap.map
+    , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
     }
 
-  type function = {arity: int, call: t list -> t, repr: string}
+  type function = {declaration: Stmt.function, closure: t Environment.t}
   type instance = {class: class, fields: t StringMap.map}
+
+  fun functionArity (f: function) =
+    length (#params (#declaration f))
+
+  fun instanceGet ({class, fields}: instance, name) =
+    case StringMap.find (fields, #lexeme name) of
+      SOME value => value
+    | NONE =>
+        (case StringMap.find (#methods class, #lexeme name) of
+           SOME func => Function func
+         | NONE =>
+             raise Error.RuntimeError
+               (name, "Undefined property '" ^ #lexeme name ^ "'."))
+
+  fun instanceSet ({class, fields}, name: SourceToken.t, value) =
+    Instance
+      {class = class, fields = StringMap.insert (fields, #lexeme name, value)}
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false
@@ -75,22 +95,10 @@ struct
     | toString (Boolean b) = Bool.toString b
     | toString (Number n) = numberToString n
     | toString (String s) = s
-    | toString (Function f) = #repr f
+    | toString (Builtin b) = #repr b
+    | toString (Function f) =
+        "<fn " ^ #lexeme (#name (#declaration f)) ^ ">"
     | toString (Class c) = #name c
     | toString (Instance i) =
         #name (#class i) ^ " instance"
-
-  fun instanceGet ({class, fields}: instance, name) =
-    case StringMap.find (fields, #lexeme name) of
-      SOME value => value
-    | NONE =>
-        (case StringMap.find (#methods class, #lexeme name) of
-           SOME func => Function func
-         | NONE =>
-             raise Error.RuntimeError
-               (name, "Undefined property '" ^ #lexeme name ^ "'."))
-
-  fun instanceSet ({class, fields}, name: SourceToken.t, value) =
-    Instance
-      {class = class, fields = StringMap.insert (fields, #lexeme name, value)}
 end

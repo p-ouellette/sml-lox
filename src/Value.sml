@@ -8,7 +8,7 @@ sig
   | Builtin of {repr: string, arity: int, call: t list -> t}
   | Function of {declaration: Stmt.function, closure: t Environment.t}
   | Class of class
-  | Instance of {class: class, fields: t StringMap.map}
+  | Instance of {class: class, fields: t StringMap.map} ref
   withtype class =
     { name: string
     , arity: int
@@ -17,9 +17,10 @@ sig
     }
 
   type function = {declaration: Stmt.function, closure: t Environment.t}
-  type instance = {class: class, fields: t StringMap.map}
+  type instance = {class: class, fields: t StringMap.map} ref
 
   val functionArity: function -> int
+  val newInstance: class -> t
   val instanceGet: instance * SourceToken.t -> t
   val instanceSet: instance * SourceToken.t * t -> t
   val isTruthy: t -> bool
@@ -37,7 +38,7 @@ struct
   | Builtin of {repr: string, arity: int, call: t list -> t}
   | Function of {declaration: Stmt.function, closure: t Env.t}
   | Class of class
-  | Instance of {class: class, fields: t StringMap.map}
+  | Instance of {class: class, fields: t StringMap.map} ref
   withtype class =
     { name: string
     , arity: int
@@ -46,10 +47,13 @@ struct
     }
 
   type function = {declaration: Stmt.function, closure: t Env.t}
-  type instance = {class: class, fields: t StringMap.map}
+  type instance = {class: class, fields: t StringMap.map} ref
 
   fun functionArity (f: function) =
     length (#params (#declaration f))
+
+  fun newInstance class =
+    Instance (ref {class = class, fields = StringMap.empty})
 
   fun bindMethod ({declaration, closure}, instance) =
     let
@@ -59,7 +63,7 @@ struct
       {declaration = declaration, closure = env}
     end
 
-  fun instanceGet (instance as {class, fields}, name) =
+  fun instanceGet (instance as ref {class, fields}, name) =
     case StringMap.find (fields, #lexeme name) of
       SOME value => value
     | NONE =>
@@ -69,9 +73,10 @@ struct
              raise Error.RuntimeError
                (name, "Undefined property '" ^ #lexeme name ^ "'."))
 
-  fun instanceSet ({class, fields}, name: SourceToken.t, value) =
-    Instance
-      {class = class, fields = StringMap.insert (fields, #lexeme name, value)}
+  fun instanceSet (instance as ref {class, fields}, name: SourceToken.t, value) =
+    let val fields = StringMap.insert (fields, #lexeme name, value)
+    in instance := {class = class, fields = fields}; Instance instance
+    end
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false
@@ -81,6 +86,7 @@ struct
     | isEqual (Boolean a, Boolean b) = a = b
     | isEqual (Number a, Number b) = Real.== (a, b)
     | isEqual (String a, String b) = a = b
+    | isEqual (Instance a, Instance b) = a = b
     | isEqual _ = false
 
   fun numberToString n =
@@ -110,5 +116,5 @@ struct
         "<fn " ^ #lexeme (#name (#declaration f)) ^ ">"
     | toString (Class c) = #name c
     | toString (Instance i) =
-        #name (#class i) ^ " instance"
+        #name (#class (!i)) ^ " instance"
 end

@@ -40,7 +40,7 @@ struct
             , call = fn x => !callThunk x
             , methods = foldl insertMethod StringMap.empty methods
             }
-          fun call _ = V.Instance {class = class, fields = StringMap.empty}
+          fun call _ = V.newInstance class
         in
           callThunk := call;
           Env.define (env, #lexeme name, V.Class class)

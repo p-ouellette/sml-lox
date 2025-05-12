@@ -83,6 +83,7 @@ struct
             ()
         ; ss
         )
+    | resolveExpr (Expr.This _, ss) = ss
     | resolveExpr (Expr.Variable _, ss) = ss
     | resolveExpr (Expr.Grouping expr, ss) = resolveExpr (expr, ss)
     | resolveExpr (Expr.Call {callee, arguments, ...}, ss) =

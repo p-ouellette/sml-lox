@@ -394,6 +394,7 @@ struct
       | T.NUMBER n => (Expr.Number n, sts')
       | T.STRING s => (Expr.String s, sts')
       | T.IDENTIFIER => (Expr.Variable st, sts')
+      | T.THIS => (Expr.This st, sts')
       | T.LEFT_PAREN =>
           let
             val (expr, sts') = expression sts'

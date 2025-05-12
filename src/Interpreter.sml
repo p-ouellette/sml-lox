@@ -106,8 +106,8 @@ struct
         | eval (Expr.Boolean b) = (V.Boolean b, env)
         | eval (Expr.Number n) = (V.Number n, env)
         | eval (Expr.String s) = (V.String s, env)
-        | eval (Expr.Variable name) =
-            (Env.get (env, name), env)
+        | eval (Expr.Variable name) = variableExpr (name, env)
+        | eval (Expr.This keyword) = variableExpr (keyword, env)
         | eval (Expr.Grouping expr) = evaluate (expr, env)
         | eval (Expr.Call x) = callExpr (x, env)
         | eval (Expr.Get x) = getExpr (x, env)
@@ -122,6 +122,9 @@ struct
     in
       eval expr
     end
+
+  and variableExpr (name, env) =
+    (Env.get (env, name), env)
 
   and callExpr ({callee, paren, arguments}, env) =
     let

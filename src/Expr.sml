@@ -6,6 +6,7 @@ struct
   | Number of real
   | String of string
   | Variable of SourceToken.t
+  | This of SourceToken.t
   | Grouping of t
   | Call of {callee: t, paren: SourceToken.t, arguments: t list}
   | Get of t * SourceToken.t

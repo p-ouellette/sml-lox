@@ -27,34 +27,44 @@ sig
   val toString: t -> string
 end =
 struct
+  structure Env = Environment
+
   datatype t =
     Nil
   | Boolean of bool
   | Number of real
   | String of string
   | Builtin of {repr: string, arity: int, call: t list -> t}
-  | Function of {declaration: Stmt.function, closure: t Environment.t}
+  | Function of {declaration: Stmt.function, closure: t Env.t}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map}
   withtype class =
     { name: string
     , arity: int
     , call: t list -> t
-    , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
+    , methods: {declaration: Stmt.function, closure: t Env.t} StringMap.map
     }
 
-  type function = {declaration: Stmt.function, closure: t Environment.t}
+  type function = {declaration: Stmt.function, closure: t Env.t}
   type instance = {class: class, fields: t StringMap.map}
 
   fun functionArity (f: function) =
     length (#params (#declaration f))
 
-  fun instanceGet ({class, fields}: instance, name) =
+  fun bindMethod ({declaration, closure}, instance) =
+    let
+      val env = Env.new (SOME closure)
+      val env = Env.define (env, "this", Instance instance)
+    in
+      {declaration = declaration, closure = env}
+    end
+
+  fun instanceGet (instance as {class, fields}, name) =
     case StringMap.find (fields, #lexeme name) of
       SOME value => value
     | NONE =>
         (case StringMap.find (#methods class, #lexeme name) of
-           SOME func => Function func
+           SOME method => Function (bindMethod (method, instance))
          | NONE =>
              raise Error.RuntimeError
                (name, "Undefined property '" ^ #lexeme name ^ "'."))

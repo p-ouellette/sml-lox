@@ -9,6 +9,7 @@ struct
   structure M = StringMap
 
   structure FunctionType = struct datatype t = NONE | FUNCTION | METHOD end
+  structure ClassType = struct datatype t = NONE | CLASS end
 
   fun beginScope scopes = M.empty :: scopes
   fun endScope scopes = tl scopes
@@ -28,54 +29,60 @@ struct
         M.insert (s, #lexeme name, true) :: ss
 
   fun resolveStmt _ (Stmt.Class {name, methods}, ss) =
-        let val ss = define (declare (ss, name), name)
-        in foldl (resolveFunction FunctionType.METHOD) ss methods
+        let
+          val ss = define (declare (ss, name), name)
+          val ctx = {func = FunctionType.METHOD, class = ClassType.CLASS}
+        in
+          foldl (resolveFunction ctx) ss methods
         end
-    | resolveStmt _ (Stmt.Function f, ss) =
-        let val ss = define (declare (ss, #name f), #name f)
-        in resolveFunction FunctionType.FUNCTION (f, ss)
+    | resolveStmt {class, ...} (Stmt.Function f, ss) =
+        let
+          val ss = define (declare (ss, #name f), #name f)
+          val ctx = {func = FunctionType.FUNCTION, class = class}
+        in
+          resolveFunction ctx (f, ss)
         end
-    | resolveStmt _ (Stmt.Var {name, initializer}, ss) =
-        let val ss = resolveExpr (initializer, declare (ss, name))
+    | resolveStmt ctx (Stmt.Var {name, initializer}, ss) =
+        let val ss = resolveExpr ctx (initializer, declare (ss, name))
         in define (ss, name)
         end
-    | resolveStmt _ (Stmt.Expression expr, ss) = resolveExpr (expr, ss)
-    | resolveStmt func (Stmt.If {condition, thenBranch, elseBranch}, ss) =
+    | resolveStmt ctx (Stmt.Expression expr, ss) = resolveExpr ctx (expr, ss)
+    | resolveStmt ctx (Stmt.If {condition, thenBranch, elseBranch}, ss) =
         let
-          val ss = resolveExpr (condition, ss)
-          val ss = resolveStmt func (thenBranch, ss)
+          val ss = resolveExpr ctx (condition, ss)
+          val ss = resolveStmt ctx (thenBranch, ss)
         in
           case elseBranch of
-            SOME stmt => resolveStmt func (stmt, ss)
+            SOME stmt => resolveStmt ctx (stmt, ss)
           | NONE => ss
         end
-    | resolveStmt _ (Stmt.Print expr, ss) = resolveExpr (expr, ss)
-    | resolveStmt func (Stmt.Return (token, expr), ss) =
-        ( if func = FunctionType.NONE then
+    | resolveStmt ctx (Stmt.Print expr, ss) = resolveExpr ctx (expr, ss)
+    | resolveStmt ctx (Stmt.Return (token, expr), ss) =
+        ( if #func ctx = FunctionType.NONE then
             Error.errorAt (token, "Can't return from top-level code.")
           else
             ()
-        ; resolveExpr (expr, ss)
+        ; resolveExpr ctx (expr, ss)
         )
-    | resolveStmt func (Stmt.While {condition, body}, ss) =
-        resolveExpr (condition, resolveStmt func (body, ss))
-    | resolveStmt func (Stmt.Block stmts, ss) =
-        endScope (resolveStmts (stmts, beginScope ss, func))
+    | resolveStmt ctx (Stmt.While {condition, body}, ss) =
+        resolveExpr ctx (condition, resolveStmt ctx (body, ss))
+    | resolveStmt ctx (Stmt.Block stmts, ss) =
+        endScope (resolveStmts (stmts, beginScope ss, ctx))
 
-  and resolveFunction func ({params, body, ...}, ss) =
+  and resolveFunction ctx ({params, body, ...}, ss) =
     let
       val ss = beginScope ss
       val ss = foldl (fn (p, ss) => define (declare (ss, p), p)) ss params
-      val ss = resolveStmts (body, ss, func)
+      val ss = resolveStmts (body, ss, ctx)
     in
       endScope ss
     end
 
-  and resolveExpr (Expr.Nil, ss) = ss
-    | resolveExpr (Expr.Boolean _, ss) = ss
-    | resolveExpr (Expr.Number _, ss) = ss
-    | resolveExpr (Expr.String _, ss) = ss
-    | resolveExpr (Expr.Variable name, ss as s :: _) =
+  and resolveExpr _ (Expr.Nil, ss) = ss
+    | resolveExpr _ (Expr.Boolean _, ss) = ss
+    | resolveExpr _ (Expr.Number _, ss) = ss
+    | resolveExpr _ (Expr.String _, ss) = ss
+    | resolveExpr _ (Expr.Variable name, ss as s :: _) =
         ( if M.find (s, #lexeme name) = SOME false then
             Error.errorAt
               (name, "Can't read local variable in its own initializer.")
@@ -83,24 +90,32 @@ struct
             ()
         ; ss
         )
-    | resolveExpr (Expr.This _, ss) = ss
-    | resolveExpr (Expr.Variable _, ss) = ss
-    | resolveExpr (Expr.Grouping expr, ss) = resolveExpr (expr, ss)
-    | resolveExpr (Expr.Call {callee, arguments, ...}, ss) =
-        foldl resolveExpr (resolveExpr (callee, ss)) arguments
-    | resolveExpr (Expr.Get (expr, _), ss) = resolveExpr (expr, ss)
-    | resolveExpr (Expr.Unary (_, right), ss) = resolveExpr (right, ss)
-    | resolveExpr (Expr.Binary (left, _, right), ss) =
-        resolveExpr (right, resolveExpr (left, ss))
-    | resolveExpr (Expr.Logical (left, _, right), ss) =
-        resolveExpr (right, resolveExpr (left, ss))
-    | resolveExpr (Expr.Set (object, _, value), ss) =
-        resolveExpr (value, resolveExpr (object, ss))
-    | resolveExpr (Expr.Assign (_, value), ss) = resolveExpr (value, ss)
+    | resolveExpr ctx (Expr.This keyword, ss) =
+        ( if #class ctx = ClassType.NONE then
+            Error.errorAt (keyword, "Can't use 'this' outside of a class.")
+          else
+            ()
+        ; ss
+        )
+    | resolveExpr _ (Expr.Variable _, ss) = ss
+    | resolveExpr ctx (Expr.Grouping expr, ss) = resolveExpr ctx (expr, ss)
+    | resolveExpr ctx (Expr.Call {callee, arguments, ...}, ss) =
+        foldl (resolveExpr ctx) (resolveExpr ctx (callee, ss)) arguments
+    | resolveExpr ctx (Expr.Get (expr, _), ss) = resolveExpr ctx (expr, ss)
+    | resolveExpr ctx (Expr.Unary (_, right), ss) = resolveExpr ctx (right, ss)
+    | resolveExpr ctx (Expr.Binary (left, _, right), ss) =
+        resolveExpr ctx (right, resolveExpr ctx (left, ss))
+    | resolveExpr ctx (Expr.Logical (left, _, right), ss) =
+        resolveExpr ctx (right, resolveExpr ctx (left, ss))
+    | resolveExpr ctx (Expr.Set (object, _, value), ss) =
+        resolveExpr ctx (value, resolveExpr ctx (object, ss))
+    | resolveExpr ctx (Expr.Assign (_, value), ss) = resolveExpr ctx (value, ss)
 
   and resolve stmts =
-    ignore (resolveStmts (stmts, [], FunctionType.NONE))
+    let val ctx = {func = FunctionType.NONE, class = ClassType.NONE}
+    in ignore (resolveStmts (stmts, [], ctx))
+    end
 
-  and resolveStmts (stmts, scopes, func) =
-    foldl (resolveStmt func) scopes stmts
+  and resolveStmts (stmts, scopes, ctx) =
+    foldl (resolveStmt ctx) scopes stmts
 end

@@ -11,8 +11,6 @@ sig
   | Instance of {class: class, fields: t StringMap.map} ref
   withtype class =
     { name: string
-    , arity: int
-    , call: t list -> t
     , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
     }
 
@@ -50,8 +48,6 @@ struct
   | Instance of {class: class, fields: t StringMap.map} ref
   withtype class =
     { name: string
-    , arity: int
-    , call: t list -> t
     , methods: {declaration: Stmt.function, closure: t Env.t} StringMap.map
     }
 

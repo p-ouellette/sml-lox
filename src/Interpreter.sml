@@ -33,17 +33,9 @@ struct
             let val (func, _) = executeFunDecl (stmt, env)
             in StringMap.insert (methods, #lexeme (#name stmt), func)
             end
-          val callThunk = ref (fn _ => raise Fail "impossible")
-          val class =
-            { name = #lexeme name
-            , arity = 0
-            , call = fn x => !callThunk x
-            , methods = foldl insertMethod StringMap.empty methods
-            }
-          fun call _ =
-            V.Instance (V.Instance.new class)
+          val methods = foldl insertMethod StringMap.empty methods
+          val class = {name = #lexeme name, methods = methods}
         in
-          callThunk := call;
           Env.define (env, #lexeme name, V.Class class)
         end
     | execute (Stmt.Function f, env) =
@@ -138,9 +130,9 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Function f => (V.Function.arity f, callFunction f)
+          V.Function func => (V.Function.arity func, callFunction func)
         | V.Builtin {arity, call, ...} => (arity, call)
-        | V.Class {arity, call, ...} => (arity, call)
+        | V.Class class => (0, callClass class)
         | _ =>
             raise Error.RuntimeError
               (paren, "Can only call functions and classes.")
@@ -165,6 +157,9 @@ struct
       (executeBlock (#body declaration, env); V.Nil)
       handle Return value => value
     end
+
+  and callClass class _ =
+    V.Instance (V.Instance.new class)
 
   and getExpr ((object, name), env) =
     let

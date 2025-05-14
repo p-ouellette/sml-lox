@@ -132,7 +132,7 @@ struct
         case callee of
           V.Function func => (V.Function.arity func, callFunction func)
         | V.Builtin {arity, call, ...} => (arity, call)
-        | V.Class class => (0, callClass class)
+        | V.Class class => (V.Class.arity class, callClass class)
         | _ =>
             raise Error.RuntimeError
               (paren, "Can only call functions and classes.")
@@ -158,8 +158,15 @@ struct
       handle Return value => value
     end
 
-  and callClass class _ =
-    V.Instance (V.Instance.new class)
+  and callClass class args =
+    let
+      val instance = V.Instance.new class
+      fun initialize init =
+        (callFunction (V.Function.bind (init, instance)) args; ())
+    in
+      Option.app initialize (V.Class.findMethod (class, "init"));
+      V.Instance instance
+    end
 
   and getExpr ((object, name), env) =
     let

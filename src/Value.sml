@@ -23,6 +23,12 @@ sig
     val bind: function * instance -> function
   end
 
+  structure Class:
+  sig
+    val findMethod: class * string -> function option
+    val arity: class -> int
+  end
+
   structure Instance:
   sig
     val new: class -> instance
@@ -68,15 +74,26 @@ struct
       end
   end
 
+  structure Class =
+  struct
+    fun findMethod (class: class, name) =
+      StringMap.find (#methods class, name)
+
+    fun arity class =
+      case findMethod (class, "init") of
+        SOME init => Function.arity init
+      | NONE => 0
+  end
+
   structure Instance =
   struct
     fun new class = ref {class = class, fields = StringMap.empty}
 
-    fun get (instance: instance as ref {class, fields}, name) =
+    fun get (instance as ref {class, fields}, name) =
       case StringMap.find (fields, #lexeme name) of
         SOME value => value
       | NONE =>
-          (case StringMap.find (#methods class, #lexeme name) of
+          (case Class.findMethod (class, #lexeme name) of
              SOME method => Function (Function.bind (method, instance))
            | NONE =>
                raise Error.RuntimeError

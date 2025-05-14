@@ -229,7 +229,8 @@ struct
         | _ => raise Error.RuntimeError (name, "Only instances have fields.")
       val (value, env) = evaluate (value, env)
     in
-      (V.instanceSet (object, name, value), env)
+      V.instanceSet (object, name, value);
+      (value, env)
     end
 
   fun interpret (statements, env) =

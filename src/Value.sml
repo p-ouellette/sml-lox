@@ -22,7 +22,7 @@ sig
   val functionArity: function -> int
   val newInstance: class -> t
   val instanceGet: instance * SourceToken.t -> t
-  val instanceSet: instance * SourceToken.t * t -> t
+  val instanceSet: instance * SourceToken.t * t -> unit
   val isTruthy: t -> bool
   val isEqual: t * t -> bool
   val toString: t -> string
@@ -75,7 +75,7 @@ struct
 
   fun instanceSet (instance as ref {class, fields}, name: SourceToken.t, value) =
     let val fields = StringMap.insert (fields, #lexeme name, value)
-    in instance := {class = class, fields = fields}; Instance instance
+    in instance := {class = class, fields = fields}
     end
 
   fun isTruthy Nil = false

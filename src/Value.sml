@@ -21,23 +21,21 @@ sig
   val isEqual: t * t -> bool
 end =
 struct
-  structure Env = Environment
-
   datatype t =
     Nil
   | Boolean of bool
   | Number of real
   | String of string
   | Builtin of {arity: int, call: t list -> t}
-  | Function of {declaration: Stmt.function, closure: t Env.t}
+  | Function of {declaration: Stmt.function, closure: t Environment.t}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map} ref
   withtype class =
     { name: string
-    , methods: {declaration: Stmt.function, closure: t Env.t} StringMap.map
+    , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
     }
 
-  type function = {declaration: Stmt.function, closure: t Env.t}
+  type function = {declaration: Stmt.function, closure: t Environment.t}
   type instance = {class: class, fields: t StringMap.map} ref
 
   fun isTruthy Nil = false

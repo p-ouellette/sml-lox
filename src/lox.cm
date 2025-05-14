@@ -12,6 +12,10 @@ Stmt.sml
 Parser.sml
 Environment.sml
 Value.sml
+Function.sml
+Class.sml
+Instance.sml
+ValueFormat.sml
 Resolver.sml
 Interpreter.sml
 Lox.sml

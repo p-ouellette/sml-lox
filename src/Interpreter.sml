@@ -61,7 +61,7 @@ struct
         end
     | execute (Stmt.Print expr, env) =
         let val (value, env) = evaluate (expr, env)
-        in (print (V.toString value ^ "\n"); env)
+        in (print (ValueFormat.fmt value ^ "\n"); env)
         end
     | execute (Stmt.Return (_, value), env) =
         let val (value, _) = evaluate (value, env)
@@ -130,9 +130,9 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Function func => (V.Function.arity func, callFunction func)
+          V.Function func => (Function.arity func, callFunction func)
         | V.Builtin {arity, call, ...} => (arity, call)
-        | V.Class class => (V.Class.arity class, callClass class)
+        | V.Class class => (Class.arity class, callClass class)
         | _ =>
             raise Error.RuntimeError
               (paren, "Can only call functions and classes.")
@@ -160,11 +160,11 @@ struct
 
   and callClass class args =
     let
-      val instance = V.Instance.new class
+      val instance = Instance.new class
       fun initialize init =
-        (callFunction (V.Function.bind (init, instance)) args; ())
+        (callFunction (Function.bind (init, instance)) args; ())
     in
-      Option.app initialize (V.Class.findMethod (class, "init"));
+      Option.app initialize (Class.findMethod (class, "init"));
       V.Instance instance
     end
 
@@ -173,7 +173,7 @@ struct
       val (object, env) = evaluate (object, env)
     in
       case object of
-        V.Instance x => (V.Instance.get (x, name), env)
+        V.Instance x => (Instance.get (x, name), env)
       | _ => raise Error.RuntimeError (name, "Only instances have properties.")
     end
 
@@ -232,7 +232,7 @@ struct
         | _ => raise Error.RuntimeError (name, "Only instances have fields.")
       val (value, env) = evaluate (value, env)
     in
-      V.Instance.set (object, name, value);
+      Instance.set (object, name, value);
       (value, env)
     end
 

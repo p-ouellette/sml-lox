@@ -5,7 +5,7 @@ sig
   | Boolean of bool
   | Number of real
   | String of string
-  | Builtin of {repr: string, arity: int, call: t list -> t}
+  | Builtin of {arity: int, call: t list -> t}
   | Function of {declaration: Stmt.function, closure: t Environment.t}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map} ref
@@ -28,7 +28,7 @@ struct
   | Boolean of bool
   | Number of real
   | String of string
-  | Builtin of {repr: string, arity: int, call: t list -> t}
+  | Builtin of {arity: int, call: t list -> t}
   | Function of {declaration: Stmt.function, closure: t Env.t}
   | Class of class
   | Instance of {class: class, fields: t StringMap.map} ref

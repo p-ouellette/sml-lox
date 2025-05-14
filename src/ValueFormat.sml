@@ -27,7 +27,7 @@ struct
     | fmt (V.Boolean b) = Bool.toString b
     | fmt (V.Number n) = numberToString n
     | fmt (V.String s) = s
-    | fmt (V.Builtin b) = #repr b
+    | fmt (V.Builtin _) = "<native fn>"
     | fmt (V.Function f) = Function.toString f
     | fmt (V.Class c) = #name c
     | fmt (V.Instance i) = Instance.toString i

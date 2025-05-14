@@ -11,8 +11,7 @@ struct
   exception Return of V.t
 
   val clock = V.Builtin
-    { repr = "<native fn>"
-    , arity = 0
+    { arity = 0
     , call = fn _ => V.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
     }
 
@@ -130,8 +129,8 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Function func => (Function.arity func, callFunction func)
-        | V.Builtin {arity, call, ...} => (arity, call)
+          V.Builtin {arity, call} => (arity, call)
+        | V.Function func => (Function.arity func, callFunction func)
         | V.Class class => (Class.arity class, callClass class)
         | _ =>
             raise Error.RuntimeError

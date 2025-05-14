@@ -19,10 +19,19 @@ sig
   type function = {declaration: Stmt.function, closure: t Environment.t}
   type instance = {class: class, fields: t StringMap.map} ref
 
-  val functionArity: function -> int
-  val newInstance: class -> t
-  val instanceGet: instance * SourceToken.t -> t
-  val instanceSet: instance * SourceToken.t * t -> unit
+  structure Function:
+  sig
+    val arity: function -> int
+    val bind: function * instance -> function
+  end
+
+  structure Instance:
+  sig
+    val new: class -> instance
+    val get: instance * SourceToken.t -> t
+    val set: instance * SourceToken.t * t -> unit
+  end
+
   val isTruthy: t -> bool
   val isEqual: t * t -> bool
   val toString: t -> string
@@ -49,34 +58,39 @@ struct
   type function = {declaration: Stmt.function, closure: t Env.t}
   type instance = {class: class, fields: t StringMap.map} ref
 
-  fun functionArity (f: function) =
-    length (#params (#declaration f))
+  structure Function =
+  struct
+    fun arity (f: function) =
+      length (#params (#declaration f))
 
-  fun newInstance class =
-    Instance (ref {class = class, fields = StringMap.empty})
+    fun bind ({declaration, closure}, instance) =
+      let
+        val env = Env.new (SOME closure)
+        val env = Env.define (env, "this", Instance instance)
+      in
+        {declaration = declaration, closure = env}
+      end
+  end
 
-  fun bindMethod ({declaration, closure}, instance) =
-    let
-      val env = Env.new (SOME closure)
-      val env = Env.define (env, "this", Instance instance)
-    in
-      {declaration = declaration, closure = env}
-    end
+  structure Instance =
+  struct
+    fun new class = ref {class = class, fields = StringMap.empty}
 
-  fun instanceGet (instance as ref {class, fields}, name) =
-    case StringMap.find (fields, #lexeme name) of
-      SOME value => value
-    | NONE =>
-        (case StringMap.find (#methods class, #lexeme name) of
-           SOME method => Function (bindMethod (method, instance))
-         | NONE =>
-             raise Error.RuntimeError
-               (name, "Undefined property '" ^ #lexeme name ^ "'."))
+    fun get (instance: instance as ref {class, fields}, name) =
+      case StringMap.find (fields, #lexeme name) of
+        SOME value => value
+      | NONE =>
+          (case StringMap.find (#methods class, #lexeme name) of
+             SOME method => Function (Function.bind (method, instance))
+           | NONE =>
+               raise Error.RuntimeError
+                 (name, "Undefined property '" ^ #lexeme name ^ "'."))
 
-  fun instanceSet (instance as ref {class, fields}, name: SourceToken.t, value) =
-    let val fields = StringMap.insert (fields, #lexeme name, value)
-    in instance := {class = class, fields = fields}
-    end
+    fun set (instance as ref {class, fields}, name: SourceToken.t, value) =
+      let val fields = StringMap.insert (fields, #lexeme name, value)
+      in instance := {class = class, fields = fields}
+      end
+  end
 
   fun isTruthy Nil = false
     | isTruthy (Boolean false) = false

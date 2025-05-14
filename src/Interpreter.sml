@@ -40,7 +40,8 @@ struct
             , call = fn x => !callThunk x
             , methods = foldl insertMethod StringMap.empty methods
             }
-          fun call _ = V.newInstance class
+          fun call _ =
+            V.Instance (V.Instance.new class)
         in
           callThunk := call;
           Env.define (env, #lexeme name, V.Class class)
@@ -137,7 +138,7 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Function f => (V.functionArity f, callFunction f)
+          V.Function f => (V.Function.arity f, callFunction f)
         | V.Builtin {arity, call, ...} => (arity, call)
         | V.Class {arity, call, ...} => (arity, call)
         | _ =>
@@ -170,7 +171,7 @@ struct
       val (object, env) = evaluate (object, env)
     in
       case object of
-        V.Instance x => (V.instanceGet (x, name), env)
+        V.Instance x => (V.Instance.get (x, name), env)
       | _ => raise Error.RuntimeError (name, "Only instances have properties.")
     end
 
@@ -229,7 +230,7 @@ struct
         | _ => raise Error.RuntimeError (name, "Only instances have fields.")
       val (value, env) = evaluate (value, env)
     in
-      V.instanceSet (object, name, value);
+      V.Instance.set (object, name, value);
       (value, env)
     end
 

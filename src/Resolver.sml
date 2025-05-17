@@ -8,7 +8,9 @@ end =
 struct
   structure M = StringMap
 
-  structure FunctionType = struct datatype t = NONE | FUNCTION | METHOD end
+  structure FunctionType =
+  struct datatype t = NONE | FUNCTION | INITIALIZER | METHOD end
+
   structure ClassType = struct datatype t = NONE | CLASS end
 
   fun beginScope scopes = M.empty :: scopes
@@ -31,9 +33,17 @@ struct
   fun resolveStmt _ (Stmt.Class {name, methods}, ss) =
         let
           val ss = define (declare (ss, name), name)
-          val ctx = {func = FunctionType.METHOD, class = ClassType.CLASS}
+          fun resolveMethod (method, ss) =
+            let
+              val func =
+                if #lexeme (#name method) = "init" then FunctionType.INITIALIZER
+                else FunctionType.METHOD
+              val ctx = {func = func, class = ClassType.CLASS}
+            in
+              resolveFunction ctx (method, ss)
+            end
         in
-          foldl (resolveFunction ctx) ss methods
+          foldl resolveMethod ss methods
         end
     | resolveStmt {class, ...} (Stmt.Function f, ss) =
         let
@@ -60,6 +70,10 @@ struct
     | resolveStmt ctx (Stmt.Return (token, expr), ss) =
         ( if #func ctx = FunctionType.NONE then
             Error.errorAt (token, "Can't return from top-level code.")
+          else
+            ()
+        ; if #func ctx = FunctionType.INITIALIZER then
+            Error.errorAt (token, "Can't return a value from an initializer.")
           else
             ()
         ; resolveExpr ctx (expr, ss)

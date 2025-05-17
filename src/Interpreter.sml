@@ -157,7 +157,8 @@ struct
       ( executeBlock (#body declaration, env)
       ; if isInitializer then Env.lookup (closure, "this") else V.Nil
       )
-      handle Return value => value
+      handle Return value =>
+        if isInitializer then Env.lookup (closure, "this") else value
     end
 
   and callClass class args =

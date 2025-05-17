@@ -28,6 +28,9 @@ struct
 
   fun execute (Stmt.Class {name, methods}, env) =
         let
+          (* Methods can reference the class. *)
+          val env = Env.define (env, #lexeme name, V.Nil)
+
           fun insertMethod (method: Stmt.function, methods) =
             let
               val methodName = #lexeme (#name method)
@@ -42,7 +45,7 @@ struct
           val methods = foldl insertMethod StringMap.empty methods
           val class = {name = #lexeme name, methods = methods}
         in
-          Env.define (env, #lexeme name, V.Class class)
+          Env.assign (env, name, V.Class class)
         end
     | execute (Stmt.Function stmt, env) =
         let

@@ -72,10 +72,14 @@ struct
             Error.errorAt (token, "Can't return from top-level code.")
           else
             ()
-        ; if #func ctx = FunctionType.INITIALIZER then
-            Error.errorAt (token, "Can't return a value from an initializer.")
-          else
-            ()
+        ; case expr of
+            Expr.Nil => ()
+          | _ =>
+              if #func ctx = FunctionType.INITIALIZER then
+                Error.errorAt
+                  (token, "Can't return a value from an initializer.")
+              else
+                ()
         ; resolveExpr ctx (expr, ss)
         )
     | resolveStmt ctx (Stmt.While {condition, body}, ss) =

@@ -8,12 +8,12 @@ struct
   fun arity (func: Value.function) =
     length (#params (#declaration func))
 
-  fun bind ({declaration, closure}, instance) =
+  fun bind ({declaration, closure, isInitializer}, instance) =
     let
       val env = Environment.new (SOME closure)
       val env = Environment.define (env, "this", Value.Instance instance)
     in
-      {declaration = declaration, closure = env}
+      {declaration = declaration, closure = env, isInitializer = isInitializer}
     end
 
   fun toString (func: Value.function) =

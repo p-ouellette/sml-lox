@@ -6,15 +6,16 @@ sig
   | Number of real
   | String of string
   | Builtin of {arity: int, call: t list -> t}
-  | Function of {declaration: Stmt.function, closure: t Environment.t}
-  | Class of class
-  | Instance of {class: class, fields: t StringMap.map} ref
-  withtype class =
-    { name: string
-    , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
-    }
+  | Function of function
+  | Class of {name: string, methods: function StringMap.map}
+  | Instance of
+      { class: {name: string, methods: function StringMap.map}
+      , fields: t StringMap.map
+      } ref
+  withtype function =
+    {declaration: Stmt.function, closure: t Environment.t, isInitializer: bool}
 
-  type function = {declaration: Stmt.function, closure: t Environment.t}
+  type class = {name: string, methods: function StringMap.map}
   type instance = {class: class, fields: t StringMap.map} ref
 
   val isTruthy: t -> bool
@@ -27,15 +28,16 @@ struct
   | Number of real
   | String of string
   | Builtin of {arity: int, call: t list -> t}
-  | Function of {declaration: Stmt.function, closure: t Environment.t}
-  | Class of class
-  | Instance of {class: class, fields: t StringMap.map} ref
-  withtype class =
-    { name: string
-    , methods: {declaration: Stmt.function, closure: t Environment.t} StringMap.map
-    }
+  | Function of function
+  | Class of {name: string, methods: function StringMap.map}
+  | Instance of
+      { class: {name: string, methods: function StringMap.map}
+      , fields: t StringMap.map
+      } ref
+  withtype function =
+    {declaration: Stmt.function, closure: t Environment.t, isInitializer: bool}
 
-  type function = {declaration: Stmt.function, closure: t Environment.t}
+  type class = {name: string, methods: function StringMap.map}
   type instance = {class: class, fields: t StringMap.map} ref
 
   fun isTruthy Nil = false

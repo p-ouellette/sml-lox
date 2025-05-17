@@ -9,9 +9,12 @@ sig
   val define: 'a t * string * 'a -> 'a t
   val assign: 'a t * SourceToken.t * 'a -> 'a t
   val get: 'a t * SourceToken.t -> 'a
+  val lookup: 'a t * string -> 'a
 end =
 struct
   structure M = StringMap
+
+  exception NotFound
 
   (* The global environment is stored in a mutable reference because a function
    * in the global scope must have access to variables declared after it.
@@ -38,22 +41,26 @@ struct
         Inner
           {values = M.insert (values, name, ref value), enclosing = enclosing}
 
-  fun undefined name =
-    raise Error.RuntimeError
-      (name, "Undefined variable '" ^ #lexeme name ^ "'.")
-
   fun getRef (Outermost values, name) =
-        (case M.find (!values, #lexeme name) of
+        (case M.find (!values, name) of
            SOME v => v
-         | NONE => undefined name)
+         | NONE => raise NotFound)
     | getRef (Inner {values, enclosing}, name) =
-        (case M.find (values, #lexeme name) of
+        (case M.find (values, name) of
            SOME v => v
          | NONE => getRef (enclosing, name))
 
-  fun assign (env, name, value) =
-    (getRef (env, name) := value; env)
+  fun undefined st =
+    raise Error.RuntimeError (st, "Undefined variable '" ^ #lexeme st ^ "'.")
 
-  fun get (env, name) =
+  fun assign (env, st, value) =
+    (getRef (env, #lexeme st) := value; env)
+    handle NotFound => undefined st
+
+  fun get (env, st) =
+    !(getRef (env, #lexeme st))
+    handle NotFound => undefined st
+
+  fun lookup (env, name) =
     !(getRef (env, name))
 end

@@ -28,18 +28,30 @@ struct
 
   fun execute (Stmt.Class {name, methods}, env) =
         let
-          fun insertMethod (stmt, methods) =
-            let val (func, _) = executeFunDecl (stmt, env)
-            in StringMap.insert (methods, #lexeme (#name stmt), func)
+          fun insertMethod (method: Stmt.function, methods) =
+            let
+              val methodName = #lexeme (#name method)
+              val func =
+                { declaration = method
+                , closure = env
+                , isInitializer = methodName = "init"
+                }
+            in
+              StringMap.insert (methods, methodName, func)
             end
           val methods = foldl insertMethod StringMap.empty methods
           val class = {name = #lexeme name, methods = methods}
         in
           Env.define (env, #lexeme name, V.Class class)
         end
-    | execute (Stmt.Function f, env) =
-        let val (_, env) = executeFunDecl (f, env)
-        in env
+    | execute (Stmt.Function stmt, env) =
+        let
+          (* Add the function to the environment for recursive calls. *)
+          val env = Env.define (env, #lexeme (#name stmt), V.Nil)
+          val func = {declaration = stmt, closure = env, isInitializer = false}
+        in
+          (* Complete the function definition. *)
+          Env.assign (env, #name stmt, V.Function func)
         end
     | execute (Stmt.Var {name, initializer}, env) =
         let val (value, env) = evaluate (initializer, env)
@@ -77,17 +89,6 @@ struct
         end
     | execute (Stmt.Block stmts, env) =
         executeBlock (stmts, Env.new (SOME env))
-
-  and executeFunDecl (declaration, env) =
-    let
-      (* Define the function in the environment for recursive calls. *)
-      val env = Env.define (env, #lexeme (#name declaration), V.Nil)
-      val function = {declaration = declaration, closure = env}
-      (* Complete the function declaration. *)
-      val env = Env.assign (env, #name declaration, V.Function function)
-    in
-      (function, env)
-    end
 
   and executeBlock (stmts, env) =
     Env.enclosing (foldl execute env stmts)
@@ -146,14 +147,16 @@ struct
         (call args, env)
     end
 
-  and callFunction {declaration, closure} args =
+  and callFunction {declaration, closure, isInitializer} args =
     let
       fun enterParam (param: SourceToken.t, arg, env) =
         Env.define (env, #lexeme param, arg)
       val env = Env.new (SOME closure)
       val env = ListPair.foldlEq enterParam env (#params declaration, args)
     in
-      (executeBlock (#body declaration, env); V.Nil)
+      ( executeBlock (#body declaration, env)
+      ; if isInitializer then Env.lookup (closure, "this") else V.Nil
+      )
       handle Return value => value
     end
 

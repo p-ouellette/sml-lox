@@ -12,6 +12,7 @@ ann "allowSigWithtype true" in
   Parser.sml
   Environment.sml
   Value.sml
+  Builtin.sml
   Function.sml
   Class.sml
   Instance.sml

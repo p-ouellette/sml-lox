@@ -10,13 +10,13 @@ struct
 
   exception Return of V.t
 
-  val clock = V.Builtin (ref
+  val clock = Builtin.new
     { arity = 0
     , call = fn _ => V.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
-    })
+    }
 
   fun baseEnv () =
-    Env.define (Env.new NONE, "clock", clock)
+    Env.define (Env.new NONE, "clock", V.Builtin clock)
 
   fun numberOperand (_, V.Number n) = n
     | numberOperand (operator, _) =
@@ -34,7 +34,7 @@ struct
           fun insertMethod (method: Stmt.function, methods) =
             let
               val methodName = #lexeme (#name method)
-              val func = ref
+              val func = Function.new
                 { declaration = method
                 , closure = env
                 , isInitializer = methodName = "init"
@@ -43,7 +43,7 @@ struct
               StringMap.insert (methods, methodName, func)
             end
           val methods = foldl insertMethod StringMap.empty methods
-          val class = ref {name = #lexeme name, methods = methods}
+          val class = Class.new {name = #lexeme name, methods = methods}
         in
           Env.assign (env, name, V.Class class)
         end
@@ -51,7 +51,7 @@ struct
         let
           (* Add the function to the environment for recursive calls. *)
           val env = Env.define (env, #lexeme (#name stmt), V.Nil)
-          val func = ref
+          val func = Function.new
             {declaration = stmt, closure = env, isInitializer = false}
         in
           (* Complete the function definition. *)
@@ -134,7 +134,7 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Builtin (ref {arity, call}) => (arity, call)
+          V.Builtin builtin => (Builtin.arity builtin, Builtin.call builtin)
         | V.Function func => (Function.arity func, callFunction func)
         | V.Class class => (Class.arity class, callClass class)
         | _ =>
@@ -151,18 +151,20 @@ struct
         (call args, env)
     end
 
-  and callFunction (ref {declaration, closure, isInitializer}) args =
+  and callFunction func args =
     let
       fun enterParam (param: SourceToken.t, arg, env) =
         Env.define (env, #lexeme param, arg)
+      val closure = Function.closure func
       val env = Env.new (SOME closure)
-      val env = ListPair.foldlEq enterParam env (#params declaration, args)
+      val env = ListPair.foldlEq enterParam env (Function.params func, args)
+      val isInit = Function.isInitializer func
     in
-      ( executeBlock (#body declaration, env)
-      ; if isInitializer then Env.lookup (closure, "this") else V.Nil
+      ( executeBlock (Function.body func, env)
+      ; if isInit then Env.lookup (closure, "this") else V.Nil
       )
       handle Return value =>
-        if isInitializer then Env.lookup (closure, "this") else value
+        if isInit then Env.lookup (closure, "this") else value
     end
 
   and callClass class args =

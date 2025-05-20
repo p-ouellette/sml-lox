@@ -1,22 +1,19 @@
 structure Value:
 sig
+  type builtin
+  type function
+  type class
+  type instance
+
   datatype t =
     Nil
   | Boolean of bool
   | Number of real
   | String of string
-  | Builtin of {arity: int, call: t list -> t} ref
+  | Builtin of builtin
   | Function of function
-  | Class of {name: string, methods: function StringMap.map} ref
-  | Instance of
-      { class: {name: string, methods: function StringMap.map} ref
-      , fields: t StringMap.map
-      } ref
-  withtype function =
-    {declaration: Stmt.function, closure: t Environment.t, isInitializer: bool} ref
-
-  type class = {name: string, methods: function StringMap.map} ref
-  type instance = {class: class, fields: t StringMap.map} ref
+  | Class of class
+  | Instance of instance
 
   val isTruthy: t -> bool
   val isEqual: t * t -> bool
@@ -27,14 +24,15 @@ struct
   | Boolean of bool
   | Number of real
   | String of string
-  | Builtin of {arity: int, call: t list -> t} ref
+  | Builtin of builtin
   | Function of function
   | Class of {name: string, methods: function StringMap.map} ref
   | Instance of
       { class: {name: string, methods: function StringMap.map} ref
       , fields: t StringMap.map
       } ref
-  withtype function =
+  withtype builtin = {arity: int, call: t list -> t} ref
+  and function =
     {declaration: Stmt.function, closure: t Environment.t, isInitializer: bool} ref
 
   type class = {name: string, methods: function StringMap.map} ref

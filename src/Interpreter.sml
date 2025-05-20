@@ -10,10 +10,10 @@ struct
 
   exception Return of V.t
 
-  val clock = V.Builtin
+  val clock = V.Builtin (ref
     { arity = 0
     , call = fn _ => V.Number (Real.fromLargeInt (Time.toSeconds (Time.now ())))
-    }
+    })
 
   fun baseEnv () =
     Env.define (Env.new NONE, "clock", clock)
@@ -34,7 +34,7 @@ struct
           fun insertMethod (method: Stmt.function, methods) =
             let
               val methodName = #lexeme (#name method)
-              val func =
+              val func = ref
                 { declaration = method
                 , closure = env
                 , isInitializer = methodName = "init"
@@ -43,7 +43,7 @@ struct
               StringMap.insert (methods, methodName, func)
             end
           val methods = foldl insertMethod StringMap.empty methods
-          val class = {name = #lexeme name, methods = methods}
+          val class = ref {name = #lexeme name, methods = methods}
         in
           Env.assign (env, name, V.Class class)
         end
@@ -51,7 +51,8 @@ struct
         let
           (* Add the function to the environment for recursive calls. *)
           val env = Env.define (env, #lexeme (#name stmt), V.Nil)
-          val func = {declaration = stmt, closure = env, isInitializer = false}
+          val func = ref
+            {declaration = stmt, closure = env, isInitializer = false}
         in
           (* Complete the function definition. *)
           Env.assign (env, #name stmt, V.Function func)
@@ -133,7 +134,7 @@ struct
       val args = rev args
       val (arity, call) =
         case callee of
-          V.Builtin {arity, call} => (arity, call)
+          V.Builtin (ref {arity, call}) => (arity, call)
         | V.Function func => (Function.arity func, callFunction func)
         | V.Class class => (Class.arity class, callClass class)
         | _ =>
@@ -150,7 +151,7 @@ struct
         (call args, env)
     end
 
-  and callFunction {declaration, closure, isInitializer} args =
+  and callFunction (ref {declaration, closure, isInitializer}) args =
     let
       fun enterParam (param: SourceToken.t, arg, env) =
         Env.define (env, #lexeme param, arg)

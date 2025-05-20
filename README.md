@@ -8,11 +8,6 @@ load it into the SML/NJ REPL.
 
 ## Status
 
-Currently passes the [test suite][test-suite] for chapter 11.
-
-## Notes
-
-- function and class values always compare not equal
-  - can be fixed by making them ref types like instance
+Currently passes the [test suite][test-suite] for chapter 12.
 
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

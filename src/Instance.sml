@@ -24,5 +24,5 @@ struct
     end
 
   fun toString (instance: Value.instance) =
-    #name (#class (!instance)) ^ " instance"
+    #name (!(#class (!instance))) ^ " instance"
 end

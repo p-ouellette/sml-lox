@@ -29,6 +29,6 @@ struct
     | fmt (V.String s) = s
     | fmt (V.Builtin _) = "<native fn>"
     | fmt (V.Function f) = Function.toString f
-    | fmt (V.Class c) = #name c
+    | fmt (V.Class (ref c)) = #name c
     | fmt (V.Instance i) = Instance.toString i
 end

@@ -5,7 +5,7 @@ sig
 end =
 struct
   fun findMethod (class: Value.class, name) =
-    StringMap.find (#methods class, name)
+    StringMap.find (#methods (!class), name)
 
   fun arity class =
     case findMethod (class, "init") of

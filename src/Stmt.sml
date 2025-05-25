@@ -1,7 +1,11 @@
 structure Stmt =
 struct
   datatype t =
-    Class of {name: SourceToken.t, methods: function list}
+    Class of
+      { name: SourceToken.t
+      , superclass: SourceToken.t option
+      , methods: function list
+      }
   | Function of function
   | Var of {name: SourceToken.t, initializer: Expr.t}
   | Expression of Expr.t

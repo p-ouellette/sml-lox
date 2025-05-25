@@ -26,7 +26,7 @@ struct
     | numberOperands (operator, _, _) =
         raise Error.RuntimeError (operator, "Operands must be numbers.")
 
-  fun execute (Stmt.Class {name, methods}, env) =
+  fun execute (Stmt.Class {name, superclass, methods}, env) =
         let
           (* Methods can reference the class. *)
           val env = Env.define (env, #lexeme name, V.Nil)

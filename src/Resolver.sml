@@ -30,7 +30,7 @@ struct
     | define (s :: ss, name: SourceToken.t) =
         M.insert (s, #lexeme name, true) :: ss
 
-  fun resolveStmt _ (Stmt.Class {name, methods}, ss) =
+  fun resolveStmt _ (Stmt.Class {name, superclass, methods}, ss) =
         let
           val ss = define (declare (ss, name), name)
           fun resolveMethod (method, ss) =
@@ -43,6 +43,12 @@ struct
               resolveFunction ctx (method, ss)
             end
         in
+          Option.app
+            (fn st =>
+               if #lexeme st = #lexeme name then
+                 Error.errorAt (st, "A class can't inherit from itself.")
+               else
+                 ()) superclass;
           foldl resolveMethod ss methods
         end
     | resolveStmt {class, ...} (Stmt.Function f, ss) =
@@ -108,6 +114,7 @@ struct
             ()
         ; ss
         )
+    | resolveExpr _ (Expr.Variable _, ss) = ss
     | resolveExpr ctx (Expr.This keyword, ss) =
         ( if #class ctx = ClassType.NONE then
             Error.errorAt (keyword, "Can't use 'this' outside of a class.")
@@ -115,7 +122,6 @@ struct
             ()
         ; ss
         )
-    | resolveExpr _ (Expr.Variable _, ss) = ss
     | resolveExpr ctx (Expr.Grouping expr, ss) = resolveExpr ctx (expr, ss)
     | resolveExpr ctx (Expr.Call {callee, arguments, ...}, ss) =
         foldl (resolveExpr ctx) (resolveExpr ctx (callee, ss)) arguments

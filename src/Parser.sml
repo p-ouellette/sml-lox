@@ -90,7 +90,7 @@ struct
       | _ => statement sts
     end
 
-  (* classDecl -> "class" IDENTIFIER "{" function* "}" *)
+  (* classDecl -> "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" *)
   and classDeclaration sts =
     let
       fun parseMethods (acc, sts) =
@@ -101,13 +101,25 @@ struct
           in parseMethods (method :: acc, sts)
           end
       val (name, sts) = consume (T.IDENTIFIER, "Expect class name.", sts)
+      val (superclass, sts) =
+        case match ([T.LESS], sts) of
+          SOME (_, sts') =>
+            let
+              val (superclass, sts') =
+                consume (T.IDENTIFIER, "Expect superclass name.", sts')
+            in
+              (SOME superclass, sts')
+            end
+        | NONE => (NONE, sts)
       val (_, sts) = consume
         (T.LEFT_BRACE, "Expect '{' before class body.", sts)
       val (methods, sts) = parseMethods ([], sts)
       val (_, sts) = consume
         (T.RIGHT_BRACE, "Expect '}' after class body.", sts)
+      val class =
+        Stmt.Class {name = name, superclass = superclass, methods = methods}
     in
-      (Stmt.Class {name = name, methods = methods}, sts)
+      (class, sts)
     end
 
   (* function -> IDENTIFIER "(" parameters? ")" block *)

@@ -27,8 +27,8 @@ struct
     | fmt (V.Boolean b) = Bool.toString b
     | fmt (V.Number n) = numberToString n
     | fmt (V.String s) = s
-    | fmt (V.Builtin b) = Builtin.toString b
-    | fmt (V.Function f) = Function.toString f
-    | fmt (V.Class c) = Class.toString c
-    | fmt (V.Instance i) = Instance.toString i
+    | fmt (V.Builtin b) = V.Builtin.toString b
+    | fmt (V.Function f) = V.Function.toString f
+    | fmt (V.Class c) = V.Class.toString c
+    | fmt (V.Instance i) = V.Instance.toString i
 end

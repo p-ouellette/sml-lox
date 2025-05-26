@@ -7,6 +7,10 @@ struct
   structure T = Token
   structure V = Value
   structure Env = Environment
+  structure Builtin = V.Builtin
+  structure Function = V.Function
+  structure Class = V.Class
+  structure Instance = V.Instance
 
   exception Return of V.t
 
@@ -28,6 +32,11 @@ struct
 
   fun execute (Stmt.Class {name, superclass, methods}, env) =
         let
+          fun getSuperclass st =
+            case Env.get (env, st) of
+              V.Class class => class
+            | _ => raise Error.RuntimeError (st, "Superclass must be a class.")
+
           (* Methods can reference the class. *)
           val env = Env.define (env, #lexeme name, V.Nil)
 
@@ -42,8 +51,11 @@ struct
             in
               StringMap.insert (methods, methodName, func)
             end
+          val superclass = Option.map getSuperclass superclass
           val methods = foldl insertMethod StringMap.empty methods
-          val class = Class.new {name = #lexeme name, methods = methods}
+          val class =
+            Class.new
+              {name = #lexeme name, superclass = superclass, methods = methods}
         in
           Env.assign (env, name, V.Class class)
         end

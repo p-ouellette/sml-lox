@@ -394,19 +394,22 @@ struct
       (Expr.Call {callee = callee, paren = paren, arguments = arguments}, sts)
     end
 
-  (* primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" *)
+  (* primary -> "true" | "false" | "nil" | "this"
+   *          | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+   *          | "super" "." IDENTIFIER
+   *)
   and primary sts =
     let
       val (st, sts') = advance sts
     in
       case #token st of
-        T.FALSE => (Expr.Boolean false, sts')
-      | T.TRUE => (Expr.Boolean true, sts')
+        T.TRUE => (Expr.Boolean true, sts')
+      | T.FALSE => (Expr.Boolean false, sts')
       | T.NIL => (Expr.Nil, sts')
+      | T.THIS => (Expr.This st, sts')
       | T.NUMBER n => (Expr.Number n, sts')
       | T.STRING s => (Expr.String s, sts')
       | T.IDENTIFIER => (Expr.Variable st, sts')
-      | T.THIS => (Expr.This st, sts')
       | T.LEFT_PAREN =>
           let
             val (expr, sts') = expression sts'
@@ -414,6 +417,14 @@ struct
               (T.RIGHT_PAREN, "Expect ')' after expression.", sts')
           in
             (Expr.Grouping expr, sts')
+          end
+      | T.SUPER =>
+          let
+            val (_, sts') = consume (T.DOT, "Expect '.' after 'super'.", sts')
+            val (method, sts') = consume
+              (T.IDENTIFIER, "Expect superclass method name.", sts')
+          in
+            (Expr.Super {keyword = st, method = method}, sts')
           end
       | _ => raise error (st, "Expect expression.", sts)
     end

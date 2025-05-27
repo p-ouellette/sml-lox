@@ -8,6 +8,7 @@ struct
   | Variable of SourceToken.t
   | This of SourceToken.t
   | Grouping of t
+  | Super of {keyword: SourceToken.t, method: SourceToken.t}
   | Call of {callee: t, paren: SourceToken.t, arguments: t list}
   | Get of t * SourceToken.t
   | Unary of SourceToken.t * t

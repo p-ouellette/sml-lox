@@ -166,8 +166,17 @@ struct
     fun name (C x) =
       #name (!x)
 
-    fun findMethod (C x, name) =
-      StringMap.find (#methods (!x), name)
+    fun superclass (C x) =
+      #superclass (!x)
+
+    fun methods (C x) =
+      #methods (!x)
+
+    fun findMethod (class, name) =
+      case StringMap.find (methods class, name) of
+        SOME method => SOME method
+      | NONE =>
+          Option.mapPartial (fn c => findMethod (c, name)) (superclass class)
 
     fun arity class =
       case findMethod (class, "init") of

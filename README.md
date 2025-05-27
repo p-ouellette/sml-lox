@@ -8,6 +8,6 @@ load it into the SML/NJ REPL.
 
 ## Status
 
-Currently passes the [test suite][test-suite] for chapter 12.
+Currently passes the [test suite][test-suite] for chapter 13.
 
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

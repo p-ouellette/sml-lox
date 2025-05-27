@@ -11,7 +11,7 @@ struct
   structure FunctionType =
   struct datatype t = NONE | FUNCTION | INITIALIZER | METHOD end
 
-  structure ClassType = struct datatype t = NONE | CLASS end
+  structure ClassType = struct datatype t = NONE | CLASS | SUBCLASS end
 
   fun beginScope scopes = M.empty :: scopes
   fun endScope scopes = tl scopes
@@ -32,29 +32,32 @@ struct
 
   fun resolveStmt _ (Stmt.Class {name, superclass, methods}, ss) =
         let
-          val ss = define (declare (ss, name), name)
+          val class =
+            case superclass of
+              NONE => ClassType.CLASS
+            | SOME st =>
+                ( if #lexeme st = #lexeme name then
+                    Error.errorAt (st, "A class can't inherit from itself.")
+                  else
+                    ()
+                ; ClassType.SUBCLASS
+                )
           fun resolveMethod (method, ss) =
             let
               val func =
                 if #lexeme (#name method) = "init" then FunctionType.INITIALIZER
                 else FunctionType.METHOD
-              val ctx = {func = func, class = ClassType.CLASS}
             in
-              resolveFunction ctx (method, ss)
+              resolveFunction {func = func, class = class} (method, ss)
             end
+          val ss = define (declare (ss, name), name)
         in
-          Option.app
-            (fn st =>
-               if #lexeme st = #lexeme name then
-                 Error.errorAt (st, "A class can't inherit from itself.")
-               else
-                 ()) superclass;
           foldl resolveMethod ss methods
         end
-    | resolveStmt {class, ...} (Stmt.Function f, ss) =
+    | resolveStmt ctx (Stmt.Function f, ss) =
         let
           val ss = define (declare (ss, #name f), #name f)
-          val ctx = {func = FunctionType.FUNCTION, class = class}
+          val ctx = {func = FunctionType.FUNCTION, class = #class ctx}
         in
           resolveFunction ctx (f, ss)
         end
@@ -123,6 +126,16 @@ struct
         ; ss
         )
     | resolveExpr ctx (Expr.Grouping expr, ss) = resolveExpr ctx (expr, ss)
+    | resolveExpr ctx (Expr.Super {keyword, ...}, ss) =
+        ( case #class ctx of
+            ClassType.NONE =>
+              Error.errorAt (keyword, "Can't use 'super' outside of a class.")
+          | ClassType.CLASS =>
+              Error.errorAt
+                (keyword, "Can't use 'super' in a class with no superclass.")
+          | ClassType.SUBCLASS => ()
+        ; ss
+        )
     | resolveExpr ctx (Expr.Call {callee, arguments, ...}, ss) =
         foldl (resolveExpr ctx) (resolveExpr ctx (callee, ss)) arguments
     | resolveExpr ctx (Expr.Get (expr, _), ss) = resolveExpr ctx (expr, ss)

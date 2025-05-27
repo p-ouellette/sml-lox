@@ -39,6 +39,12 @@ struct
 
           (* Methods can reference the class. *)
           val env = Env.define (env, #lexeme name, V.Nil)
+          val superclass = Option.map getSuperclass superclass
+          val env =
+            case superclass of
+              NONE => env
+            | SOME class =>
+                Env.define (Env.new (SOME env), "super", V.Class class)
 
           fun insertMethod (method: Stmt.function, methods) =
             let
@@ -51,11 +57,14 @@ struct
             in
               StringMap.insert (methods, methodName, func)
             end
-          val superclass = Option.map getSuperclass superclass
           val methods = foldl insertMethod StringMap.empty methods
           val class =
             Class.new
               {name = #lexeme name, superclass = superclass, methods = methods}
+          val env =
+            case superclass of
+              NONE => env
+            | SOME _ => Env.enclosing env
         in
           Env.assign (env, name, V.Class class)
         end
@@ -118,6 +127,7 @@ struct
         | eval (Expr.Variable name) = variableExpr (name, env)
         | eval (Expr.This keyword) = variableExpr (keyword, env)
         | eval (Expr.Grouping expr) = evaluate (expr, env)
+        | eval (Expr.Super x) = superExpr (x, env)
         | eval (Expr.Call x) = callExpr (x, env)
         | eval (Expr.Get x) = getExpr (x, env)
         | eval (Expr.Unary x) = unaryExpr (x, env)
@@ -134,6 +144,26 @@ struct
 
   and variableExpr (name, env) =
     (Env.get (env, name), env)
+
+  and superExpr ({method, ...}, env) =
+    let
+      val superclass =
+        case Env.lookup (env, "super") of
+          V.Class class => class
+        | _ => raise Fail "expected class"
+      val object =
+        case Env.lookup (env, "this") of
+          V.Instance instance => instance
+        | _ => raise Fail "expected instance"
+      val method =
+        case Class.findMethod (superclass, #lexeme method) of
+          SOME method => method
+        | NONE =>
+            raise Error.RuntimeError
+              (method, "Undefined property '" ^ #lexeme method ^ "'.")
+    in
+      (V.Function (Function.bind (method, object)), env)
+    end
 
   and callExpr ({callee, paren, arguments}, env) =
     let

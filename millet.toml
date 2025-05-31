@@ -1,7 +1,5 @@
 version = 1
 [workspace]
-root = "src/lox.mlb"
+root = "*/sources.mlb"
 [diagnostics]
 5043.severity = "ignore"
-[language]
-successor-ml.sig-withtype = true

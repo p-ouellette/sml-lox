@@ -54,10 +54,10 @@ struct
         in
           foldl resolveMethod ss methods
         end
-    | resolveStmt ctx (Stmt.Function f, ss) =
+    | resolveStmt {class, ...} (Stmt.Function f, ss) =
         let
           val ss = define (declare (ss, #name f), #name f)
-          val ctx = {func = FunctionType.FUNCTION, class = #class ctx}
+          val ctx = {func = FunctionType.FUNCTION, class = class}
         in
           resolveFunction ctx (f, ss)
         end

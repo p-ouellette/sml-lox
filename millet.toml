@@ -1,5 +1,5 @@
 version = 1
 [workspace]
-root = "*/sources.mlb"
+root = "src/*/sources.mlb"
 [diagnostics]
 5043.severity = "ignore"

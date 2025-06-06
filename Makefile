@@ -1,19 +1,14 @@
-BUILD_DIR = build
 TEST_DIR = craftinginterpreters
-TREELOX = $(BUILD_DIR)/treelox
 
-all: $(TREELOX)
+all: treelox
 
-$(TREELOX): $(shell mlton -stop f treelox/sources.mlb) | $(BUILD_DIR)
-	mlton -output $@ treelox/sources.mlb
-
-$(BUILD_DIR):
-	mkdir $(BUILD_DIR)
+treelox: $(shell mlton -stop f src/treelox/sources.mlb)
+	mlton -output $@ src/treelox/sources.mlb
 
 .PHONY: test
-test: $(TEST_DIR) $(TREELOX)
-	cd $(TEST_DIR) && dart tool/bin/test.dart -i $(abspath $(TREELOX)) jlox
+test: $(TEST_DIR) treelox
+	cd $(TEST_DIR) && dart tool/bin/test.dart -i $(abspath treelox) jlox
 
 .PHONY: format
 format:
-	smlfmt --force treelox/sources.mlb
+	smlfmt --force src/*/sources.mlb

@@ -1,4 +1,4 @@
-structure Lox:
+structure Main:
 sig
   val run: string * Value.t Environment.t -> Value.t Environment.t
   val runFile: string -> Word8.word
@@ -10,10 +10,10 @@ struct
 
   structure Status =
   struct
-    val success = 0w0 : Word8.word
-    val usageError = 0w64 : Word8.word
-    val parseError = 0w65 : Word8.word
-    val runtimeError = 0w70 : Word8.word
+    val success: Word8.word = 0w0
+    val usageError: Word8.word = 0w64
+    val parseError: Word8.word = 0w65
+    val runtimeError: Word8.word = 0w70
   end
 
   fun run (prog, env) =

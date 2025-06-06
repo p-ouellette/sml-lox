@@ -14,5 +14,5 @@ Value.sml
 ValueFormat.sml
 Resolver.sml
 Interpreter.sml
-Lox.sml
+Main.sml
 call-main.sml

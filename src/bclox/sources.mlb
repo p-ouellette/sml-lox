@@ -2,3 +2,4 @@ $(SML_LIB)/basis/basis.mlb
 
 Chunk.sml
 Main.sml
+call-main.sml

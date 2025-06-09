@@ -1,6 +1,6 @@
 TEST_DIR = craftinginterpreters
 
-all: treelox
+all: treelox bclox
 
 treelox: $(shell mlton -stop f src/treelox/sources.mlb)
 	mlton -output $@ src/treelox/sources.mlb

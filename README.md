@@ -4,7 +4,7 @@ This is an interpreter for the Lox language from the book _Crafting
 Interpreters_.
 
 Run `make` to build the interpreter with MLton or use
-`sml -m treelox/sources.cm` to load it into the SML/NJ REPL.
+`sml -m src/treelox/sources.cm` to load it into the SML/NJ REPL.
 
 ## Status
 

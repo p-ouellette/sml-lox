@@ -8,8 +8,9 @@ struct
   fun main _ =
     let
       val chunk = Chunk.init ()
-      val _ = Chunk.write (chunk, OP.return)
+      val chunk = Chunk.write (chunk, OP.encode OP.RETURN)
     in
+      Chunk.disassemble (chunk, "test chunk");
       0w0 : Word8.word
     end
 end

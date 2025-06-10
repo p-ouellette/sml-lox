@@ -3,7 +3,7 @@ sig
   val main: string list -> Word8.word
 end =
 struct
-  structure OP = Chunk.Opcode
+  structure OP = Opcode
 
   fun main _ =
     let

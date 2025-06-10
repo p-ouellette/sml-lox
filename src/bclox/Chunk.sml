@@ -1,13 +1,5 @@
 structure Chunk:
 sig
-  structure Opcode:
-  sig
-    datatype t = RETURN
-
-    val encode: t -> Word8.word
-    val decode: Word8.word -> t
-  end
-
   type t
   val init: unit -> t
   val write: t * Word8.word -> t
@@ -15,17 +7,6 @@ sig
   val disassembleInstruction: t * int -> int
 end =
 struct
-  structure Opcode =
-  struct
-    datatype t = RETURN
-
-    fun encode RETURN = 0w0 : Word8.word
-
-    fun decode 0w0 = RETURN
-      | decode opcode =
-          raise Fail ("invalid opcode " ^ Word8.toString opcode)
-  end
-
   structure OP = Opcode
 
   type t = {count: int, capacity: int, code: Word8Array.array}

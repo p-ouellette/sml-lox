@@ -1,7 +1,7 @@
 structure Chunk:
 sig
   type t
-  val init: unit -> t
+  val new: unit -> t
   val write: t * Word8.word -> t
   val disassemble: t * string -> unit
   val disassembleInstruction: t * int -> int
@@ -9,12 +9,17 @@ end =
 struct
   structure OP = Opcode
 
-  type t = {count: int, capacity: int, code: Word8Array.array}
+  type t =
+    {count: int, capacity: int, code: Word8Array.array, constants: Value.array}
 
-  fun init () =
-    {count = 0, capacity = 8, code = Word8Array.array (8, 0w0)}
+  fun new () =
+    { count = 0
+    , capacity = 8
+    , code = Word8Array.array (8, 0w0)
+    , constants = Value.newArray ()
+    }
 
-  fun write ({count, capacity, code}, byte) =
+  fun write ({count, capacity, code, constants}, byte) =
     let
       val (capacity, code) =
         if capacity > count then
@@ -29,7 +34,11 @@ struct
           end
     in
       Word8Array.update (code, count, byte);
-      {count = count + 1, capacity = capacity, code = code}
+      { count = count + 1
+      , capacity = capacity
+      , code = code
+      , constants = constants
+      }
     end
 
   fun disassemble (chunk, name) =

@@ -7,7 +7,7 @@ struct
 
   fun main _ =
     let
-      val chunk = Chunk.init ()
+      val chunk = Chunk.new ()
       val chunk = Chunk.write (chunk, OP.encode OP.RETURN)
     in
       Chunk.disassemble (chunk, "test chunk");

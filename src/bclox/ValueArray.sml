@@ -3,6 +3,7 @@ sig
   type t
   val new: unit -> t
   val count: t -> int
+  val sub: t * int -> Value.t
   val write: t * Value.t -> unit
 end =
 struct
@@ -15,6 +16,9 @@ struct
 
   fun count (array: t) =
     !(#count array)
+
+  fun sub (array: t, i) =
+    A.sub (!(#values array), i)
 
   fun growArray (array, oldlen, newlen) =
     A.tabulate (newlen, fn i => if i >= oldlen then A.sub (array, i) else 0.0)

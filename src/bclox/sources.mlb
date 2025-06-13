@@ -2,6 +2,7 @@ $(SML_LIB)/basis/basis.mlb
 
 Opcode.sml
 Value.sml
+ValueArray.sml
 Chunk.sml
 Main.sml
 call-main.sml

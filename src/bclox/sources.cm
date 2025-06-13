@@ -3,5 +3,6 @@ Group is
 $/basis.cm
 Opcode.sml
 Value.sml
+ValueArray.sml
 Chunk.sml
 Main.sml

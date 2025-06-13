@@ -10,12 +10,12 @@ struct
   structure A = Word8Array
   structure OP = Opcode
 
-  type t = {count: int ref, code: A.array ref, constants: Value.array}
+  type t = {count: int ref, code: A.array ref, constants: ValueArray.t}
 
   fun new () =
     { count = ref 0
     , code = ref (A.array (8, 0w0))
-    , constants = Value.newArray ()
+    , constants = ValueArray.new ()
     }
 
   fun count (chunk: t) =
@@ -24,9 +24,8 @@ struct
   fun sub (chunk: t, i) =
     A.sub (!(#code chunk), i)
 
-  fun growArray (array, oldCount, newCount) =
-    A.tabulate (newCount, fn i =>
-      if i >= oldCount then A.sub (array, i) else 0w0)
+  fun growArray (array, oldlen, newlen) =
+    A.tabulate (newlen, fn i => if i >= oldlen then A.sub (array, i) else 0w0)
 
   fun write ({count, code, constants = _}, byte) =
     let

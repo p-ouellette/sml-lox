@@ -10,9 +10,9 @@ struct
       val chunk = Chunk.new ()
       val constant = Chunk.addConstant (chunk, 1.2)
     in
-      Chunk.write (chunk, OP.encode OP.CONSTANT);
-      Chunk.write (chunk, Word8.fromInt constant);
-      Chunk.write (chunk, OP.encode OP.RETURN);
+      Chunk.write (chunk, OP.encode OP.CONSTANT, 123);
+      Chunk.write (chunk, Word8.fromInt constant, 123);
+      Chunk.write (chunk, OP.encode OP.RETURN, 123);
       Chunk.disassemble (chunk, "test chunk");
       0w0 : Word8.word
     end

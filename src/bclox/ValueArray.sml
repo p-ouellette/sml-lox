@@ -20,17 +20,15 @@ struct
   fun sub (array: t, i) =
     A.sub (!(#values array), i)
 
-  fun growArray (array, oldlen, newlen) =
-    A.tabulate (newlen, fn i => if i >= oldlen then A.sub (array, i) else 0.0)
+  fun growArray (array, count) =
+    A.tabulate (count * 2, fn i => if i >= count then A.sub (array, i) else 0.0)
 
   fun write ({count, values}, value) =
     let
       val capacity = A.length (!values)
     in
-      if capacity < !count + 1 then
-        values := growArray (!values, capacity, capacity * 2)
-      else
-        ();
+      if capacity < !count + 1 then values := growArray (!values, capacity)
+      else ();
       A.update (!values, !count, value);
       count := !count + 1
     end

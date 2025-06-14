@@ -13,7 +13,7 @@ struct
       Chunk.write (chunk, OP.encode OP.CONSTANT, 123);
       Chunk.write (chunk, Word8.fromInt constant, 123);
       Chunk.write (chunk, OP.encode OP.RETURN, 123);
-      Chunk.disassemble (chunk, "test chunk");
+      Debug.disassembleChunk (chunk, "test chunk");
       0w0 : Word8.word
     end
 end

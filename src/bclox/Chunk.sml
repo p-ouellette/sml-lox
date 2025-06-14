@@ -2,14 +2,13 @@ structure Chunk:
 sig
   type t
   val new: unit -> t
+  val count: t -> int
+  val sub: t * int -> Word8.word
+  val getLine: t * int -> int
   val write: t * Word8.word * int -> unit
   val addConstant: t * Value.t -> int
-  val disassemble: t * string -> unit
-  val disassembleInstruction: t * int -> int
 end =
 struct
-  structure OP = Opcode
-
   type t =
     { count: int ref
     , code: Word8Array.array ref
@@ -58,48 +57,4 @@ struct
 
   fun addConstant ({constants, ...}: t, value) =
     (ValueArray.write (constants, value); ValueArray.count constants - 1)
-
-  fun disassemble (chunk: t, name) =
-    let
-      fun loop offset =
-        if offset < count chunk then
-          loop (disassembleInstruction (chunk, offset))
-        else
-          ()
-    in
-      print ("== " ^ name ^ " ==\n");
-      loop 0
-    end
-
-  and disassembleInstruction (chunk, offset) =
-    let
-      fun constantInstruction (name, chunk, offset) =
-        let
-          val constant = Word8.toInt (sub (chunk, offset + 1))
-        in
-          print (StringCvt.padRight #" " 16 name);
-          print " ";
-          print (StringCvt.padLeft #" " 4 (Int.toString constant));
-          print " '";
-          print (Value.toString (ValueArray.sub (#constants chunk, constant)));
-          print "'\n";
-          offset + 2
-        end
-
-      fun simpleInstruction (name, offset) =
-        (print (name ^ "\n"); offset + 1)
-
-      val line = getLine (chunk, offset)
-    in
-      print (StringCvt.padLeft #"0" 4 (Int.toString offset));
-      print " ";
-      if offset > 0 andalso line = getLine (chunk, offset - 1) then
-        print "   | "
-      else
-        print (StringCvt.padLeft #" " 4 (Int.toString line) ^ " ");
-
-      case OP.decode (sub (chunk, offset)) of
-        OP.CONSTANT => constantInstruction ("OP_CONSTANT", chunk, offset)
-      | OP.RETURN => simpleInstruction ("OP_RETURN", offset)
-    end
 end

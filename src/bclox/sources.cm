@@ -5,4 +5,5 @@ Opcode.sml
 Value.sml
 ValueArray.sml
 Chunk.sml
+Debug.sml
 Main.sml

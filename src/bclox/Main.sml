@@ -14,6 +14,7 @@ struct
       Chunk.write (chunk, Word8.fromInt constant, 123);
       Chunk.write (chunk, OP.encode OP.RETURN, 123);
       Debug.disassembleChunk (chunk, "test chunk");
+      VM.interpret chunk;
       0w0 : Word8.word
     end
 end

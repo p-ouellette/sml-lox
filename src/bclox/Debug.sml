@@ -28,7 +28,7 @@ struct
           print " ";
           print (StringCvt.padLeft #" " 4 (Int.toString constant));
           print " '";
-          print (Value.toString (ValueArray.sub (#constants chunk, constant)));
+          Value.print (Chunk.getConstant (chunk, constant));
           print "'\n";
           offset + 2
         end
@@ -45,7 +45,7 @@ struct
       else
         print (StringCvt.padLeft #" " 4 (Int.toString line) ^ " ");
 
-      case OP.decode (Chunk.sub (chunk, offset)) of
+      case Chunk.getOpcode (chunk, offset) of
         OP.CONSTANT => constantInstruction ("OP_CONSTANT", chunk, offset)
       | OP.RETURN => simpleInstruction ("OP_RETURN", offset)
     end

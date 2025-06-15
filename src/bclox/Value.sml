@@ -1,10 +1,11 @@
 structure Value:
 sig
   type t
-  val toString: t -> string
+  val print: t -> unit
 end =
 struct
   type t = real
 
-  fun toString value = Real.toString value
+  fun print value =
+    TextIO.print (Real.toString value)
 end

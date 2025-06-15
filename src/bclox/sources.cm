@@ -1,9 +1,11 @@
 Group is
 
 $/basis.cm
+smlnj-IntArray.sml
 Opcode.sml
 Value.sml
 ValueArray.sml
 Chunk.sml
 Debug.sml
+VM.sml
 Main.sml

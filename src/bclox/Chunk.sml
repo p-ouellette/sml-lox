@@ -4,9 +4,11 @@ sig
   val new: unit -> t
   val count: t -> int
   val sub: t * int -> Word8.word
+  val getOpcode: t * int -> Opcode.t
   val getLine: t * int -> int
   val write: t * Word8.word * int -> unit
   val addConstant: t * Value.t -> int
+  val getConstant: t * int -> Value.t
 end =
 struct
   type t =
@@ -28,6 +30,9 @@ struct
 
   fun sub (chunk: t, i) =
     Word8Array.sub (!(#code chunk), i)
+
+  fun getOpcode (chunk, i) =
+    Opcode.decode (sub (chunk, i))
 
   fun getLine (chunk: t, i) =
     IntArray.sub (!(#lines chunk), i)
@@ -57,4 +62,7 @@ struct
 
   fun addConstant ({constants, ...}: t, value) =
     (ValueArray.write (constants, value); ValueArray.count constants - 1)
+
+  fun getConstant (chunk: t, i) =
+    ValueArray.sub (#constants chunk, i)
 end

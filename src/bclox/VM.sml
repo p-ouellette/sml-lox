@@ -11,25 +11,37 @@ struct
 
   val debugTraceExecution = true
 
+  fun push (stack, value) = value :: stack
+
+  fun pop [] = raise Empty
+    | pop (v :: stack) = (v, stack)
+
   fun interpret chunk =
     let
       fun readConstant i =
         Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, i)))
 
-      fun run i =
+      fun run (i, stack) =
         let
           val _ =
-            if debugTraceExecution then Debug.disassembleInstruction (chunk, i)
-            else 0
+            if debugTraceExecution then
+              ( print "          "
+              ; app (fn v => (print "[ "; Value.print v; print " ]"))
+                  (rev stack)
+              ; print "\n"
+              ; ignore (Debug.disassembleInstruction (chunk, i))
+              )
+            else
+              ()
         in
           case Chunk.getOpcode (chunk, i) of
-            OP.CONSTANT =>
-              let val constant = readConstant (i + 1)
-              in Value.print constant; print "\n"; run (i + 2)
+            OP.CONSTANT => run (i + 2, push (stack, readConstant (i + 1)))
+          | OP.RETURN =>
+              let val (v, _) = pop stack
+              in Value.print v; print "\n"; OK
               end
-          | OP.RETURN => OK
         end
     in
-      run 0
+      run (0, [])
     end
 end

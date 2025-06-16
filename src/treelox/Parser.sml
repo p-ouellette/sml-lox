@@ -8,7 +8,7 @@ struct
   fun error (st, msg, sts) =
     (Error.errorAt (st, msg); Error.ParserError sts)
 
-  fun advance ([]: SourceToken.t list) = raise Fail "no more tokens"
+  fun advance ([]: SourceToken.t list) = raise Empty
     | advance (st :: sts) = (st, sts)
 
   fun match (tokens, sts) =

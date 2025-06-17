@@ -8,13 +8,29 @@ struct
   fun main _ =
     let
       val chunk = Chunk.new ()
+
       val constant = Chunk.addConstant (chunk, 1.2)
+      val _ = Chunk.write (chunk, OP.encode OP.CONSTANT, 123)
+      val _ = Chunk.write (chunk, Word8.fromInt constant, 123)
+
+      val constant = Chunk.addConstant (chunk, 3.4)
+      val _ = Chunk.write (chunk, OP.encode OP.CONSTANT, 123)
+      val _ = Chunk.write (chunk, Word8.fromInt constant, 123)
+
+      val _ = Chunk.write (chunk, OP.encode OP.ADD, 123)
+
+      val constant = Chunk.addConstant (chunk, 5.6)
+      val _ = Chunk.write (chunk, OP.encode OP.CONSTANT, 123)
+      val _ = Chunk.write (chunk, Word8.fromInt constant, 123)
+
+      val _ = Chunk.write (chunk, OP.encode OP.DIVIDE, 123)
+      val _ = Chunk.write (chunk, OP.encode OP.NEGATE, 123)
+
+      val _ = Chunk.write (chunk, OP.encode OP.RETURN, 123)
+      val _ = Debug.disassembleChunk (chunk, "test chunk")
+
+      val _ = VM.interpret chunk
     in
-      Chunk.write (chunk, OP.encode OP.CONSTANT, 123);
-      Chunk.write (chunk, Word8.fromInt constant, 123);
-      Chunk.write (chunk, OP.encode OP.RETURN, 123);
-      Debug.disassembleChunk (chunk, "test chunk");
-      VM.interpret chunk;
       0w0 : Word8.word
     end
 end

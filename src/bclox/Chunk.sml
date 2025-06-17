@@ -39,11 +39,11 @@ struct
 
   fun growWord8Array (array, count) =
     Word8Array.tabulate (count * 2, fn i =>
-      if i >= count then Word8Array.sub (array, i) else 0w0)
+      if i < count then Word8Array.sub (array, i) else 0w0)
 
   fun growIntArray (array, count) =
     IntArray.tabulate (count * 2, fn i =>
-      if i >= count then IntArray.sub (array, i) else 0)
+      if i < count then IntArray.sub (array, i) else 0)
 
   fun write ({count, code, lines, ...}: t, byte, line) =
     let

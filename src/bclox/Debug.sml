@@ -47,6 +47,11 @@ struct
 
       case Chunk.getOpcode (chunk, offset) of
         OP.CONSTANT => constantInstruction ("OP_CONSTANT", chunk, offset)
+      | OP.ADD => simpleInstruction ("OP_ADD", offset)
+      | OP.SUBTRACT => simpleInstruction ("OP_SUBTRACT", offset)
+      | OP.MULTIPLY => simpleInstruction ("OP_MULTIPLY", offset)
+      | OP.DIVIDE => simpleInstruction ("OP_DIVIDE", offset)
+      | OP.NEGATE => simpleInstruction ("OP_NEGATE", offset)
       | OP.RETURN => simpleInstruction ("OP_RETURN", offset)
     end
 end

@@ -50,5 +50,5 @@ struct
         runPrompt (Interpreter.baseEnv ())
     | main [fname] = runFile fname
     | main _ =
-        (print "Usage: lox [script]"; Status.usageError)
+        (print "Usage: treelox [script]"; Status.usageError)
 end

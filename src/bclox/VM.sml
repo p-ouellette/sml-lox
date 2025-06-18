@@ -1,8 +1,8 @@
 structure VM:
 sig
-  type result
+  datatype result = OK | COMPILE_ERROR | RUNTIME_ERROR
 
-  val interpret: Chunk.t -> result
+  val interpret: string -> result
 end =
 struct
   structure OP = Opcode
@@ -16,8 +16,10 @@ struct
   fun pop [] = raise Empty
     | pop (v :: stack) = (v, stack)
 
-  fun interpret chunk =
+  fun interpret source =
     let
+      val chunk = Chunk.new ()
+
       fun readConstant i =
         Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, i)))
 
@@ -58,6 +60,7 @@ struct
               end
         end
     in
-      run (0, [])
+      Compiler.compile source;
+      OK
     end
 end

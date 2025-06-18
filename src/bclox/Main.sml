@@ -3,34 +3,37 @@ sig
   val main: string list -> Word8.word
 end =
 struct
-  structure OP = Opcode
+  structure TIO = TextIO
 
-  fun main _ =
+  structure Status =
+  struct
+    val success: Word8.word = 0w0
+    val usageError: Word8.word = 0w64
+    val parseError: Word8.word = 0w65
+    val runtimeError: Word8.word = 0w70
+  end
+
+  fun runFile fname =
     let
-      val chunk = Chunk.new ()
-
-      val constant = Chunk.addConstant (chunk, 1.2)
-      val _ = Chunk.write (chunk, OP.encode OP.CONSTANT, 123)
-      val _ = Chunk.write (chunk, Word8.fromInt constant, 123)
-
-      val constant = Chunk.addConstant (chunk, 3.4)
-      val _ = Chunk.write (chunk, OP.encode OP.CONSTANT, 123)
-      val _ = Chunk.write (chunk, Word8.fromInt constant, 123)
-
-      val _ = Chunk.write (chunk, OP.encode OP.ADD, 123)
-
-      val constant = Chunk.addConstant (chunk, 5.6)
-      val _ = Chunk.write (chunk, OP.encode OP.CONSTANT, 123)
-      val _ = Chunk.write (chunk, Word8.fromInt constant, 123)
-
-      val _ = Chunk.write (chunk, OP.encode OP.DIVIDE, 123)
-      val _ = Chunk.write (chunk, OP.encode OP.NEGATE, 123)
-
-      val _ = Chunk.write (chunk, OP.encode OP.RETURN, 123)
-      val _ = Debug.disassembleChunk (chunk, "test chunk")
-
-      val _ = VM.interpret chunk
+      val strm = TIO.openIn fname
+      val prog = TIO.inputAll strm
     in
-      0w0 : Word8.word
+      TIO.closeIn strm;
+      case VM.interpret prog of
+        VM.OK => Status.success
+      | VM.COMPILE_ERROR => Status.parseError
+      | VM.RUNTIME_ERROR => Status.runtimeError
     end
+
+  fun runPrompt () =
+    ( print "> "
+    ; case TIO.inputLine TIO.stdIn of
+        NONE => (print "\n"; Status.success)
+      | SOME s => (VM.interpret s; runPrompt ())
+    )
+
+  fun main [] = runPrompt ()
+    | main [fname] = runFile fname
+    | main _ =
+        (print "Usage: bclox [script]"; Status.usageError)
 end

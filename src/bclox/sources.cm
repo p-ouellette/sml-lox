@@ -7,5 +7,7 @@ Value.sml
 ValueArray.sml
 Chunk.sml
 Debug.sml
+Scanner.sml
+Compiler.sml
 VM.sml
 Main.sml

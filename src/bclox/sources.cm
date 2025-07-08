@@ -7,6 +7,7 @@ Value.sml
 ValueArray.sml
 Chunk.sml
 Debug.sml
+Token.sml
 Scanner.sml
 Compiler.sml
 VM.sml

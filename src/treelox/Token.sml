@@ -1,6 +1,7 @@
 structure Token:
 sig
   datatype t =
+  (* single-character tokens *)
     LEFT_PAREN
   | RIGHT_PAREN
   | LEFT_BRACE
@@ -12,7 +13,7 @@ sig
   | SEMICOLON
   | SLASH
   | STAR
-
+  (* one or two character tokens *)
   | BANG
   | BANG_EQUAL
   | EQUAL
@@ -21,11 +22,11 @@ sig
   | GREATER_EQUAL
   | LESS
   | LESS_EQUAL
-
+  (* literals *)
   | IDENTIFIER
   | STRING of string
   | NUMBER of real
-
+  (* keywords *)
   | AND
   | CLASS
   | ELSE

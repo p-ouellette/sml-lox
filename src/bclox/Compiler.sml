@@ -11,8 +11,8 @@ struct
         in
           if #line token <> line then print (Int.toString (#line token))
           else print "|";
-          print (#lexeme token ^ "\n");
-          if #kind token <> Token.Kind.EOF then loop (cs, #line token) else ()
+          print (" '" ^ #lexeme token ^ "'\n");
+          if #kind token <> Token.EOF then loop (cs, #line token) else ()
         end
     in
       loop (Scanner.init source, ~1)

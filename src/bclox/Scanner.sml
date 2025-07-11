@@ -36,8 +36,29 @@ struct
     , line = line
     }
 
-  fun scan (cs as {source = _, current = start, line = _}) =
+  val identifierType =
+    fn "and" => T.AND
+     | "class" => T.CLASS
+     | "else" => T.ELSE
+     | "false" => T.FALSE
+     | "for" => T.FOR
+     | "fun" => T.FUN
+     | "if" => T.IF
+     | "nil" => T.NIL
+     | "or" => T.OR
+     | "print" => T.PRINT
+     | "return" => T.RETURN
+     | "super" => T.SUPER
+     | "this" => T.THIS
+     | "true" => T.TRUE
+     | "var" => T.VAR
+     | "while" => T.WHILE
+     | _ => T.IDENTIFIER
+
+  fun scan (cs: cs) =
     let
+      val start = #current cs
+
       fun token (cs, kind) =
         (makeToken (cs, start, kind), cs)
 
@@ -61,6 +82,28 @@ struct
         | SOME (_, cs') => string cs'
         | NONE => error (cs, "Unterminated string.")
 
+      fun number cs =
+        let
+          val csInt = dropl Char.isDigit cs
+          val cs =
+            case getc csInt of
+              SOME (#".", csDot) =>
+                let val csFrac = dropl Char.isDigit csDot
+                in if #current csDot = #current csFrac then csInt else csFrac
+                end
+            | _ => csInt
+        in
+          token (cs, T.NUMBER)
+        end
+
+      fun identifier cs =
+        let
+          val cs = dropl (fn c => Char.isAlphaNum c orelse c = #"_") cs
+          val id = String.substring (#source cs, start, #current cs - start)
+        in
+          token (cs, identifierType id)
+        end
+
       val scan' =
         fn (#"(", cs) => token (cs, T.LEFT_PAREN)
          | (#")", cs) => token (cs, T.RIGHT_PAREN)
@@ -82,7 +125,10 @@ struct
          | (#"\t", cs) => scan cs
          | (#"\n", cs) => scan cs
          | (#"\"", cs) => string cs
-         | (_, cs) => error (cs, "Unexpected character.")
+         | (c, cs) =>
+          if Char.isDigit c then number cs
+          else if Char.isAlpha c then identifier cs
+          else error (cs, "Unexpected character.")
     in
       case getc cs of
         NONE => token (cs, T.EOF)

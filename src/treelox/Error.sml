@@ -22,7 +22,7 @@ struct
   val hadRuntimeError = ref false
 
   fun eprint s =
-    (TIO.output (TIO.stdErr, s); TIO.flushOut TIO.stdOut)
+    (TIO.output (TIO.stdErr, s); TIO.flushOut TIO.stdErr)
 
   fun report (line, where_, msg) =
     ( app eprint

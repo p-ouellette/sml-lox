@@ -2,7 +2,7 @@ structure Scanner:
 sig
   type cs
 
-  val init: string -> cs
+  val new: string -> cs
   val scan: cs -> Token.t * cs
 end =
 struct
@@ -11,7 +11,7 @@ struct
   (* character source *)
   type cs = {source: string, current: int, line: int}
 
-  fun init source = {source = source, current = 0, line = 1}
+  fun new source = {source = source, current = 0, line = 1}
 
   fun getc {source, current, line} =
     if current >= size source then

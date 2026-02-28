@@ -18,7 +18,7 @@ struct
 
   fun interpret source =
     let
-      val chunk = Chunk.new ()
+      val chunk = Compiler.compile source
 
       fun readConstant i =
         Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, i)))
@@ -60,7 +60,7 @@ struct
               end
         end
     in
-      Compiler.compile source;
-      OK
+      run (0, [])
     end
+    handle Compiler.Error => COMPILE_ERROR
 end

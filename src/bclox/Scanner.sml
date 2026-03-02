@@ -1,15 +1,14 @@
 structure Scanner:
 sig
-  type cs
+  type t
 
-  val new: string -> cs
-  val scan: cs -> Token.t * cs
+  val new: string -> t
+  val scan: t -> Token.t * t
 end =
 struct
   structure T = Token
 
-  (* character source *)
-  type cs = {source: string, current: int, line: int}
+  type t = {source: string, current: int, line: int}
 
   fun new source = {source = source, current = 0, line = 1}
 
@@ -26,9 +25,9 @@ struct
           SOME (c, {source = source, current = current + 1, line = line})
       end
 
-  (* advances cs up to the first character not matching the predicate f. *)
-  fun dropl f cs =
-    StringCvt.dropl f getc cs
+  (* advances up to the first character not matching the predicate f. *)
+  fun dropl f s =
+    StringCvt.dropl f getc s
 
   fun makeToken ({source, current, line}, start, kind) =
     { kind = kind
@@ -55,83 +54,83 @@ struct
      | "while" => T.WHILE
      | _ => T.IDENTIFIER
 
-  fun scan (cs: cs) =
+  fun scan (s: t) =
     let
-      val start = #current cs
+      val start = #current s
 
-      fun token (cs, kind) =
-        (makeToken (cs, start, kind), cs)
+      fun token (s, kind) =
+        (makeToken (s, start, kind), s)
 
-      fun error (cs: cs, message) =
-        ({kind = T.ERROR, lexeme = message, line = #line cs}, cs)
+      fun error (s: t, message) =
+        ({kind = T.ERROR, lexeme = message, line = #line s}, s)
 
-      fun match (cs, expected, ok, fail) =
-        case getc cs of
-          SOME (c, cs') =>
-            if c = expected then token (cs', ok) else token (cs, fail)
-        | _ => token (cs, fail)
+      fun match (s, expected, ok, fail) =
+        case getc s of
+          SOME (c, s') =>
+            if c = expected then token (s', ok) else token (s, fail)
+        | _ => token (s, fail)
 
-      fun slashOrComment cs =
-        case getc cs of
-          SOME (#"/", cs') => scan (dropl (fn c => c <> #"\n") cs')
-        | _ => token (cs, T.SLASH)
+      fun slashOrComment s =
+        case getc s of
+          SOME (#"/", s') => scan (dropl (fn c => c <> #"\n") s')
+        | _ => token (s, T.SLASH)
 
-      fun string cs =
-        case getc cs of
-          SOME (#"\"", cs') => token (cs', T.STRING)
-        | SOME (_, cs') => string cs'
-        | NONE => error (cs, "Unterminated string.")
+      fun string s =
+        case getc s of
+          SOME (#"\"", s') => token (s', T.STRING)
+        | SOME (_, s') => string s'
+        | NONE => error (s, "Unterminated string.")
 
-      fun number cs =
+      fun number s =
         let
-          val csInt = dropl Char.isDigit cs
-          val cs =
-            case getc csInt of
-              SOME (#".", csDot) =>
-                let val csFrac = dropl Char.isDigit csDot
-                in if #current csDot = #current csFrac then csInt else csFrac
+          val sInt = dropl Char.isDigit s
+          val s =
+            case getc sInt of
+              SOME (#".", sDot) =>
+                let val sFrac = dropl Char.isDigit sDot
+                in if #current sDot = #current sFrac then sInt else sFrac
                 end
-            | _ => csInt
+            | _ => sInt
         in
-          token (cs, T.NUMBER)
+          token (s, T.NUMBER)
         end
 
-      fun identifier cs =
+      fun identifier s =
         let
-          val cs = dropl (fn c => Char.isAlphaNum c orelse c = #"_") cs
-          val id = String.substring (#source cs, start, #current cs - start)
+          val s = dropl (fn c => Char.isAlphaNum c orelse c = #"_") s
+          val id = String.substring (#source s, start, #current s - start)
         in
-          token (cs, identifierType id)
+          token (s, identifierType id)
         end
 
       val scan' =
-        fn (#"(", cs) => token (cs, T.LEFT_PAREN)
-         | (#")", cs) => token (cs, T.RIGHT_PAREN)
-         | (#"{", cs) => token (cs, T.LEFT_BRACE)
-         | (#"}", cs) => token (cs, T.RIGHT_BRACE)
-         | (#";", cs) => token (cs, T.SEMICOLON)
-         | (#",", cs) => token (cs, T.COMMA)
-         | (#".", cs) => token (cs, T.DOT)
-         | (#"-", cs) => token (cs, T.MINUS)
-         | (#"+", cs) => token (cs, T.PLUS)
-         | (#"*", cs) => token (cs, T.STAR)
-         | (#"!", cs) => match (cs, #"=", T.BANG_EQUAL, T.BANG)
-         | (#"=", cs) => match (cs, #"=", T.EQUAL_EQUAL, T.EQUAL)
-         | (#"<", cs) => match (cs, #"=", T.LESS_EQUAL, T.LESS)
-         | (#">", cs) => match (cs, #"=", T.GREATER_EQUAL, T.GREATER)
-         | (#"/", cs) => slashOrComment cs
-         | (#" ", cs) => scan cs
-         | (#"\r", cs) => scan cs
-         | (#"\t", cs) => scan cs
-         | (#"\n", cs) => scan cs
-         | (#"\"", cs) => string cs
-         | (c, cs) =>
-          if Char.isDigit c then number cs
-          else if Char.isAlpha c then identifier cs
-          else error (cs, "Unexpected character.")
+        fn (#"(", s) => token (s, T.LEFT_PAREN)
+         | (#")", s) => token (s, T.RIGHT_PAREN)
+         | (#"{", s) => token (s, T.LEFT_BRACE)
+         | (#"}", s) => token (s, T.RIGHT_BRACE)
+         | (#";", s) => token (s, T.SEMICOLON)
+         | (#",", s) => token (s, T.COMMA)
+         | (#".", s) => token (s, T.DOT)
+         | (#"-", s) => token (s, T.MINUS)
+         | (#"+", s) => token (s, T.PLUS)
+         | (#"*", s) => token (s, T.STAR)
+         | (#"!", s) => match (s, #"=", T.BANG_EQUAL, T.BANG)
+         | (#"=", s) => match (s, #"=", T.EQUAL_EQUAL, T.EQUAL)
+         | (#"<", s) => match (s, #"=", T.LESS_EQUAL, T.LESS)
+         | (#">", s) => match (s, #"=", T.GREATER_EQUAL, T.GREATER)
+         | (#"/", s) => slashOrComment s
+         | (#" ", s) => scan s
+         | (#"\r", s) => scan s
+         | (#"\t", s) => scan s
+         | (#"\n", s) => scan s
+         | (#"\"", s) => string s
+         | (c, s) =>
+          if Char.isDigit c then number s
+          else if Char.isAlpha c then identifier s
+          else error (s, "Unexpected character.")
     in
-      case getc cs of
-        NONE => token (cs, T.EOF)
-      | SOME (c, cs) => scan' (c, cs)
+      case getc s of
+        NONE => token (s, T.EOF)
+      | SOME (c, s) => scan' (c, s)
     end
 end

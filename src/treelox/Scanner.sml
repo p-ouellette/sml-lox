@@ -5,8 +5,7 @@ end =
 struct
   structure T = Token
 
-  (* character source *)
-  type cs = {source: string, current: int, line: int}
+  type t = {source: string, current: int, line: int}
 
   fun substr (s, i, j) =
     String.substring (s, i, j - i)
@@ -24,9 +23,9 @@ struct
           SOME (c, {source = source, current = current + 1, line = line})
       end
 
-  (* advances cs up to the first character not matching the predicate f. *)
-  fun dropl f cs =
-    StringCvt.dropl f getc cs
+  (* advances up to the first character not matching the predicate f. *)
+  fun dropl f s =
+    StringCvt.dropl f getc s
 
   fun newToken ({source, current, line}, start, token) =
     {token = token, lexeme = substr (source, start, current), line = line}
@@ -50,84 +49,84 @@ struct
      | "while" => T.WHILE
      | _ => T.IDENTIFIER
 
-  fun scanToken (cs as {source, current = start, line}) =
+  fun scanToken (s as {source, current = start, line}) =
     let
-      fun token (cs, ty) =
-        SOME (newToken (cs, start, ty), cs)
+      fun token (s, ty) =
+        SOME (newToken (s, start, ty), s)
 
-      fun match (cs, expected, ok, fail) =
-        case getc cs of
-          SOME (c, cs') =>
-            if c = expected then token (cs', ok) else token (cs, fail)
-        | _ => token (cs, fail)
+      fun match (s, expected, ok, fail) =
+        case getc s of
+          SOME (c, s') =>
+            if c = expected then token (s', ok) else token (s, fail)
+        | _ => token (s, fail)
 
-      fun slashOrComment cs =
-        case getc cs of
-          SOME (#"/", cs') => scanToken (dropl (fn c => c <> #"\n") cs')
-        | _ => token (cs, T.SLASH)
+      fun slashOrComment s =
+        case getc s of
+          SOME (#"/", s') => scanToken (dropl (fn c => c <> #"\n") s')
+        | _ => token (s, T.SLASH)
 
-      fun string cs =
-        case getc cs of
-          SOME (#"\"", cs') =>
-            token (cs', T.STRING (substr (source, start + 1, #current cs)))
-        | SOME (_, cs') => string cs'
-        | NONE => (Error.error (#line cs, "Unterminated string."); NONE)
+      fun string s =
+        case getc s of
+          SOME (#"\"", s') =>
+            token (s', T.STRING (substr (source, start + 1, #current s)))
+        | SOME (_, s') => string s'
+        | NONE => (Error.error (#line s, "Unterminated string."); NONE)
 
-      fun number cs =
+      fun number s =
         let
-          val csInt = dropl Char.isDigit cs
-          val cs =
-            case getc csInt of
-              SOME (#".", csDot) =>
-                let val csFrac = dropl Char.isDigit csDot
-                in if #current csDot = #current csFrac then csInt else csFrac
+          val sInt = dropl Char.isDigit s
+          val s =
+            case getc sInt of
+              SOME (#".", sDot) =>
+                let val sFrac = dropl Char.isDigit sDot
+                in if #current sDot = #current sFrac then sInt else sFrac
                 end
-            | _ => csInt
-          val n = valOf (Real.fromString (substr (source, start, #current cs)))
+            | _ => sInt
+          val n = valOf (Real.fromString (substr (source, start, #current s)))
         in
-          token (cs, T.NUMBER n)
+          token (s, T.NUMBER n)
         end
 
-      fun identifier cs =
-        let val cs = dropl (fn c => Char.isAlphaNum c orelse c = #"_") cs
-        in token (cs, keywordType (substr (source, start, #current cs)))
+      fun identifier s =
+        let val s = dropl (fn c => Char.isAlphaNum c orelse c = #"_") s
+        in token (s, keywordType (substr (source, start, #current s)))
         end
 
       val scan =
-        fn (#"(", cs) => token (cs, T.LEFT_PAREN)
-         | (#")", cs) => token (cs, T.RIGHT_PAREN)
-         | (#"{", cs) => token (cs, T.LEFT_BRACE)
-         | (#"}", cs) => token (cs, T.RIGHT_BRACE)
-         | (#",", cs) => token (cs, T.COMMA)
-         | (#".", cs) => token (cs, T.DOT)
-         | (#"-", cs) => token (cs, T.MINUS)
-         | (#"+", cs) => token (cs, T.PLUS)
-         | (#";", cs) => token (cs, T.SEMICOLON)
-         | (#"*", cs) => token (cs, T.STAR)
-         | (#"!", cs) => match (cs, #"=", T.BANG_EQUAL, T.BANG)
-         | (#"=", cs) => match (cs, #"=", T.EQUAL_EQUAL, T.EQUAL)
-         | (#"<", cs) => match (cs, #"=", T.LESS_EQUAL, T.LESS)
-         | (#">", cs) => match (cs, #"=", T.GREATER_EQUAL, T.GREATER)
-         | (#"/", cs) => slashOrComment cs
-         | (#" ", cs) => scanToken cs
-         | (#"\r", cs) => scanToken cs
-         | (#"\t", cs) => scanToken cs
-         | (#"\n", cs) => scanToken cs
-         | (#"\"", cs) => string cs
-         | (c, cs) =>
-          if Char.isDigit c then number cs
-          else if Char.isAlpha c then identifier cs
-          else (Error.error (line, "Unexpected character."); scanToken cs)
+        fn (#"(", s) => token (s, T.LEFT_PAREN)
+         | (#")", s) => token (s, T.RIGHT_PAREN)
+         | (#"{", s) => token (s, T.LEFT_BRACE)
+         | (#"}", s) => token (s, T.RIGHT_BRACE)
+         | (#",", s) => token (s, T.COMMA)
+         | (#".", s) => token (s, T.DOT)
+         | (#"-", s) => token (s, T.MINUS)
+         | (#"+", s) => token (s, T.PLUS)
+         | (#";", s) => token (s, T.SEMICOLON)
+         | (#"*", s) => token (s, T.STAR)
+         | (#"!", s) => match (s, #"=", T.BANG_EQUAL, T.BANG)
+         | (#"=", s) => match (s, #"=", T.EQUAL_EQUAL, T.EQUAL)
+         | (#"<", s) => match (s, #"=", T.LESS_EQUAL, T.LESS)
+         | (#">", s) => match (s, #"=", T.GREATER_EQUAL, T.GREATER)
+         | (#"/", s) => slashOrComment s
+         | (#" ", s) => scanToken s
+         | (#"\r", s) => scanToken s
+         | (#"\t", s) => scanToken s
+         | (#"\n", s) => scanToken s
+         | (#"\"", s) => string s
+         | (c, s) =>
+          if Char.isDigit c then number s
+          else if Char.isAlpha c then identifier s
+          else (Error.error (line, "Unexpected character."); scanToken s)
     in
-      Option.mapPartial scan (getc cs)
+      Option.mapPartial scan (getc s)
     end
 
   fun scanTokens source =
     let
-      fun scan (l, cs) =
-        case scanToken cs of
-          NONE => rev ({token = Token.EOF, lexeme = "", line = #line cs} :: l)
-        | SOME (t, cs) => scan (t :: l, cs)
+      fun scan (l, s) =
+        case scanToken s of
+          NONE => rev ({token = Token.EOF, lexeme = "", line = #line s} :: l)
+        | SOME (t, s) => scan (t :: l, s)
     in
       scan ([], {source = source, current = 0, line = 1})
     end

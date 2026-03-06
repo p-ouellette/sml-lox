@@ -8,6 +8,7 @@ Run `make` to build the interpreter with MLton or use
 
 ## Status
 
-Currently passes the [test suite][test-suite] for jlox.
+treelox passes the jlox [test suite][test-suite].
+bclox passes the clox test suite for chapter 17.
 
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

@@ -13,8 +13,6 @@ sig
   val runtimeError: SourceToken.t * string -> unit
 end =
 struct
-  structure TIO = TextIO
-
   exception ParserError of SourceToken.t list
   exception RuntimeError of SourceToken.t * string
 
@@ -22,7 +20,7 @@ struct
   val hadRuntimeError = ref false
 
   fun eprint s =
-    (TIO.output (TIO.stdErr, s); TIO.flushOut TIO.stdErr)
+    (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
   fun report (line, where_, msg) =
     ( app eprint

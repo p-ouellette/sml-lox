@@ -48,6 +48,10 @@ sig
   | EOF
 
   type t = {kind: kind, lexeme: string, line: int}
+
+  val kind: t -> kind
+  val lexeme: t -> string
+  val line: t -> int
 end =
 struct
   datatype kind =
@@ -98,4 +102,8 @@ struct
   | EOF
 
   type t = {kind: kind, lexeme: string, line: int}
+
+  fun kind (token: t) = #kind token
+  fun lexeme (token: t) = #lexeme token
+  fun line (token: t) = #line token
 end

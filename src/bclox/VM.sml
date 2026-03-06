@@ -9,8 +9,6 @@ struct
 
   datatype result = OK | COMPILE_ERROR | RUNTIME_ERROR
 
-  val debugTraceExecution = true
-
   fun push (stack, value) = value :: stack
 
   fun pop [] = raise Empty
@@ -34,7 +32,7 @@ struct
             end
 
           val _ =
-            if debugTraceExecution then
+            if Debug.traceExecution then
               ( print "          "
               ; app (fn v => (print "[ "; Value.print v; print " ]"))
                   (rev stack)

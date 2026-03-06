@@ -1,10 +1,15 @@
 structure Debug:
 sig
+  val printCode: bool
+  val traceExecution: bool
   val disassembleChunk: Chunk.t * string -> unit
   val disassembleInstruction: Chunk.t * int -> int
 end =
 struct
   structure OP = Opcode
+
+  val printCode = false
+  val traceExecution = false
 
   fun disassembleChunk (chunk: Chunk.t, name) =
     let

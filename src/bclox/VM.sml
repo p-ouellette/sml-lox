@@ -5,7 +5,7 @@ sig
   val interpret: string -> result
 end =
 struct
-  structure OP = Opcode
+  structure Op = Opcode
   structure V = Value
 
   datatype result = Ok | CompileError | RuntimeError
@@ -53,16 +53,20 @@ struct
         ();
 
       case Chunk.getOpcode (chunk, ip) of
-        OP.Constant =>
+        Op.Constant =>
           run (chunk, ip + 2, push (stack, readConstant (chunk, ip + 1)))
-      | OP.Nil => run (chunk, ip + 1, push (stack, V.Nil))
-      | OP.True => run (chunk, ip + 1, push (stack, V.Boolean true))
-      | OP.False => run (chunk, ip + 1, push (stack, V.Boolean false))
-      | OP.Add => binaryOp op+
-      | OP.Subtract => binaryOp op-
-      | OP.Multiply => binaryOp op*
-      | OP.Divide => binaryOp op/
-      | OP.Negate =>
+      | Op.Nil => run (chunk, ip + 1, push (stack, V.Nil))
+      | Op.True => run (chunk, ip + 1, push (stack, V.Boolean true))
+      | Op.False => run (chunk, ip + 1, push (stack, V.Boolean false))
+      | Op.Add => binaryOp op+
+      | Op.Subtract => binaryOp op-
+      | Op.Multiply => binaryOp op*
+      | Op.Divide => binaryOp op/
+      | Op.Not =>
+          let val (v, stack) = pop stack
+          in run (chunk, ip + 1, push (stack, V.Boolean (V.isFalsy v)))
+          end
+      | Op.Negate =>
           let
             val (v, stack) = pop stack
           in
@@ -70,7 +74,7 @@ struct
               V.Number n => run (chunk, ip + 1, push (stack, V.Number (~n)))
             | _ => runtimeError (chunk, ip, "Operand must be a number.")
           end
-      | OP.Return => let val (v, _) = pop stack in V.print v; print "\n"; Ok end
+      | Op.Return => let val (v, _) = pop stack in V.print v; print "\n"; Ok end
     end
 
   fun interpret source =

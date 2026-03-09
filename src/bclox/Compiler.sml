@@ -136,7 +136,7 @@ struct
     | T.Semicolon => makeRule (NONE, NONE, Prec.none)
     | T.Slash => makeRule (NONE, SOME binary, Prec.factor)
     | T.Star => makeRule (NONE, SOME binary, Prec.factor)
-    | T.Bang => makeRule (NONE, NONE, Prec.none)
+    | T.Bang => makeRule (SOME unary, NONE, Prec.none)
     | T.BangEqual => makeRule (NONE, NONE, Prec.none)
     | T.Equal => makeRule (NONE, NONE, Prec.none)
     | T.EqualEqual => makeRule (NONE, NONE, Prec.none)
@@ -213,7 +213,8 @@ struct
       val parser' = parsePrecedence (parser, chunk, Prec.unary)
     in
       case operatorKind of
-        T.Minus => emitByte (chunk, parser, Op.encode Op.Negate)
+        T.Bang => emitByte (chunk, parser, Op.encode Op.Not)
+      | T.Minus => emitByte (chunk, parser, Op.encode Op.Negate)
       | _ => raise Fail "expected unary operator";
       parser'
     end

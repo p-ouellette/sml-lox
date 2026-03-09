@@ -9,6 +9,7 @@ sig
   | Subtract
   | Multiply
   | Divide
+  | Not
   | Negate
   | Return
 
@@ -25,6 +26,7 @@ struct
   | Subtract
   | Multiply
   | Divide
+  | Not
   | Negate
   | Return
 
@@ -37,8 +39,9 @@ struct
      | Subtract => 0w5
      | Multiply => 0w6
      | Divide => 0w7
-     | Negate => 0w8
-     | Return => 0w9
+     | Not => 0w8
+     | Negate => 0w9
+     | Return => 0w10
 
   val decode =
     fn 0w0 => Constant
@@ -49,7 +52,8 @@ struct
      | 0w5 => Subtract
      | 0w6 => Multiply
      | 0w7 => Divide
-     | 0w8 => Negate
-     | 0w9 => Return
+     | 0w8 => Not
+     | 0w9 => Negate
+     | 0w10 => Return
      | opcode => raise Fail ("invalid opcode " ^ Word8.toString opcode)
 end

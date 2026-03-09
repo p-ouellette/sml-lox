@@ -6,7 +6,7 @@ sig
   val disassembleInstruction: Chunk.t * int -> int
 end =
 struct
-  structure OP = Opcode
+  structure Op = Opcode
 
   val printCode = false
   val traceExecution = false
@@ -51,15 +51,16 @@ struct
         print (StringCvt.padLeft #" " 4 (Int.toString line) ^ " ");
 
       case Chunk.getOpcode (chunk, offset) of
-        OP.Constant => constantInstruction ("OP_CONSTANT", chunk, offset)
-      | OP.Nil => simpleInstruction ("OP_NIL", offset)
-      | OP.True => simpleInstruction ("OP_TRUE", offset)
-      | OP.False => simpleInstruction ("OP_FALSE", offset)
-      | OP.Add => simpleInstruction ("OP_ADD", offset)
-      | OP.Subtract => simpleInstruction ("OP_SUBTRACT", offset)
-      | OP.Multiply => simpleInstruction ("OP_MULTIPLY", offset)
-      | OP.Divide => simpleInstruction ("OP_DIVIDE", offset)
-      | OP.Negate => simpleInstruction ("OP_NEGATE", offset)
-      | OP.Return => simpleInstruction ("OP_RETURN", offset)
+        Op.Constant => constantInstruction ("CONSTANT", chunk, offset)
+      | Op.Nil => simpleInstruction ("NIL", offset)
+      | Op.True => simpleInstruction ("TRUE", offset)
+      | Op.False => simpleInstruction ("FALSE", offset)
+      | Op.Add => simpleInstruction ("ADD", offset)
+      | Op.Subtract => simpleInstruction ("SUBTRACT", offset)
+      | Op.Multiply => simpleInstruction ("MULTIPLY", offset)
+      | Op.Divide => simpleInstruction ("DIVIDE", offset)
+      | Op.Not => simpleInstruction ("NOT", offset)
+      | Op.Negate => simpleInstruction ("NEGATE", offset)
+      | Op.Return => simpleInstruction ("RETURN", offset)
     end
 end

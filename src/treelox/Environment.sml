@@ -16,10 +16,10 @@ struct
 
   exception NotFound
 
+  type 'a map = 'a ref M.map
   (* The global environment is stored in a mutable reference because a function
    * in the global scope must have access to variables declared after it.
    *)
-  type 'a map = 'a ref M.map
   datatype 'a t =
     Outermost of 'a map ref
   | Inner of {values: 'a map, enclosing: 'a t}

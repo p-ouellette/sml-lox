@@ -7,12 +7,12 @@ sig
   val write: t * Value.t -> unit
 end =
 struct
-  structure A = RealArray
+  structure A = Array
 
-  type t = {count: int ref, values: A.array ref}
+  type t = {count: int ref, values: Value.t A.array ref}
 
   fun new () =
-    {count = ref 0, values = ref (A.array (8, 0.0))}
+    {count = ref 0, values = ref (A.array (8, Value.Nil))}
 
   fun count (array: t) =
     !(#count array)
@@ -21,7 +21,8 @@ struct
     A.sub (!(#values array), i)
 
   fun growArray (array, count) =
-    A.tabulate (count * 2, fn i => if i >= count then A.sub (array, i) else 0.0)
+    A.tabulate (count * 2, fn i =>
+      if i >= count then A.sub (array, i) else Value.Nil)
 
   fun write ({count, values}, value) =
     let

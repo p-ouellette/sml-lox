@@ -1,11 +1,15 @@
 structure Value:
 sig
-  type t
+  datatype t = Nil | Boolean of bool | Number of real
+
   val print: t -> unit
 end =
 struct
-  type t = real
+  datatype t = Nil | Boolean of bool | Number of real
 
-  fun print value =
-    TextIO.print (Real.toString value)
+  fun print Nil = TextIO.print "nil"
+    | print (Boolean b) =
+        TextIO.print (Bool.toString b)
+    | print (Number n) =
+        TextIO.print (Real.toString n)
 end

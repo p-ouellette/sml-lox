@@ -1,10 +1,12 @@
-# Lox interpreter in Standard ML
+# Lox interpreters in Standard ML
 
-This is an interpreter for the Lox language from the book _Crafting
+There are two Lox interpreters based on the ones in the book _Crafting
 Interpreters_.
+treelox is a tree-walk interpreter based on jlox.
+bclox is a bytecode virtual machine based on clox.
 
-Run `make` to build the interpreter with MLton or use
-`sml -m src/treelox/sources.cm` to load it into the SML/NJ REPL.
+Run `make` to build the interpreters with MLton or use `sml -m
+src/<interpreter>/sources.cm` to load an interpreter into the SML/NJ REPL.
 
 ## Status
 

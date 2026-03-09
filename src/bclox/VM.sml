@@ -6,6 +6,7 @@ sig
 end =
 struct
   structure OP = Opcode
+  structure V = Value
 
   datatype result = OK | COMPILE_ERROR | RUNTIME_ERROR
 
@@ -14,51 +15,66 @@ struct
   fun pop [] = raise Empty
     | pop (v :: stack) = (v, stack)
 
-  fun interpret source =
+  fun eprint s =
+    (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
+
+  fun runtimeError (chunk, ip, message) =
     let
-      val chunk = Compiler.compile source
+      val line = Chunk.getLine (chunk, ip)
+    in
+      eprint (message ^ "\n");
+      eprint ("[line " ^ Int.toString line ^ "] in script\n");
+      RUNTIME_ERROR
+    end
 
-      fun readConstant i =
-        Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, i)))
+  fun readConstant (chunk, i) =
+    Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, i)))
 
-      fun run (i, stack) =
+  fun run (chunk, ip, stack) =
+    let
+      fun binaryOp f =
         let
-          fun binaryOp f =
-            let
-              val (b, stack) = pop stack
-              val (a, stack) = pop stack
-            in
-              run (i + 1, push (stack, f (a, b)))
-            end
-
-          val _ =
-            if Debug.traceExecution then
-              ( print "          "
-              ; app (fn v => (print "[ "; Value.print v; print " ]"))
-                  (rev stack)
-              ; print "\n"
-              ; ignore (Debug.disassembleInstruction (chunk, i))
-              )
-            else
-              ()
+          val (b, stack) = pop stack
+          val (a, stack) = pop stack
         in
-          case Chunk.getOpcode (chunk, i) of
-            OP.CONSTANT => run (i + 2, push (stack, readConstant (i + 1)))
-          | OP.ADD => binaryOp op+
-          | OP.SUBTRACT => binaryOp op-
-          | OP.MULTIPLY => binaryOp op*
-          | OP.DIVIDE => binaryOp op/
-          | OP.NEGATE =>
-              let val (v, stack) = pop stack
-              in run (i + 1, push (stack, ~v))
-              end
-          | OP.RETURN =>
-              let val (v, _) = pop stack
-              in Value.print v; print "\n"; OK
-              end
+          case (a, b) of
+            (V.Number a, V.Number b) =>
+              run (chunk, ip + 1, push (stack, V.Number (f (a, b))))
+          | _ => runtimeError (chunk, ip, "Operands must be numbers.")
         end
     in
-      run (0, [])
+      if Debug.traceExecution then
+        ( print "          "
+        ; app (fn v => (print "[ "; V.print v; print " ]")) (rev stack)
+        ; print "\n"
+        ; ignore (Debug.disassembleInstruction (chunk, ip))
+        )
+      else
+        ();
+
+      case Chunk.getOpcode (chunk, ip) of
+        OP.CONSTANT =>
+          run (chunk, ip + 2, push (stack, readConstant (chunk, ip + 1)))
+      | OP.NIL => run (chunk, ip + 1, push (stack, V.Nil))
+      | OP.TRUE => run (chunk, ip + 1, push (stack, V.Boolean true))
+      | OP.FALSE => run (chunk, ip + 1, push (stack, V.Boolean false))
+      | OP.ADD => binaryOp op+
+      | OP.SUBTRACT => binaryOp op-
+      | OP.MULTIPLY => binaryOp op*
+      | OP.DIVIDE => binaryOp op/
+      | OP.NEGATE =>
+          let
+            val (v, stack) = pop stack
+          in
+            case v of
+              V.Number n => run (chunk, ip + 1, push (stack, V.Number (~n)))
+            | _ => runtimeError (chunk, ip, "Operand must be a number.")
+          end
+      | OP.RETURN => let val (v, _) = pop stack in V.print v; print "\n"; OK end
     end
-    handle Compiler.Error => COMPILE_ERROR
+
+  fun interpret source =
+    case Compiler.compile source of
+      SOME chunk => run (chunk, 0, [])
+    | NONE => COMPILE_ERROR
 end

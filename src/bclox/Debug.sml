@@ -52,6 +52,9 @@ struct
 
       case Chunk.getOpcode (chunk, offset) of
         OP.CONSTANT => constantInstruction ("OP_CONSTANT", chunk, offset)
+      | OP.NIL => simpleInstruction ("OP_NIL", offset)
+      | OP.TRUE => simpleInstruction ("OP_TRUE", offset)
+      | OP.FALSE => simpleInstruction ("OP_FALSE", offset)
       | OP.ADD => simpleInstruction ("OP_ADD", offset)
       | OP.SUBTRACT => simpleInstruction ("OP_SUBTRACT", offset)
       | OP.MULTIPLY => simpleInstruction ("OP_MULTIPLY", offset)

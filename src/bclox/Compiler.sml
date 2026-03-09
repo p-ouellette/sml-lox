@@ -1,14 +1,10 @@
 structure Compiler:
 sig
-  exception Error
-
-  val compile: string -> Chunk.t
+  val compile: string -> Chunk.t option
 end =
 struct
   structure T = Token
   structure Op = Opcode
-
-  exception Error
 
   type parser =
     { scanner: Scanner.t
@@ -154,17 +150,17 @@ struct
     | T.AND => makeRule (NONE, NONE, Prec.none)
     | T.CLASS => makeRule (NONE, NONE, Prec.none)
     | T.ELSE => makeRule (NONE, NONE, Prec.none)
-    | T.FALSE => makeRule (NONE, NONE, Prec.none)
+    | T.FALSE => makeRule (SOME false_, NONE, Prec.none)
     | T.FUN => makeRule (NONE, NONE, Prec.none)
     | T.FOR => makeRule (NONE, NONE, Prec.none)
     | T.IF => makeRule (NONE, NONE, Prec.none)
-    | T.NIL => makeRule (NONE, NONE, Prec.none)
+    | T.NIL => makeRule (SOME nil_, NONE, Prec.none)
     | T.OR => makeRule (NONE, NONE, Prec.none)
     | T.PRINT => makeRule (NONE, NONE, Prec.none)
     | T.RETURN => makeRule (NONE, NONE, Prec.none)
     | T.SUPER => makeRule (NONE, NONE, Prec.none)
     | T.THIS => makeRule (NONE, NONE, Prec.none)
-    | T.TRUE => makeRule (NONE, NONE, Prec.none)
+    | T.TRUE => makeRule (SOME true_, NONE, Prec.none)
     | T.VAR => makeRule (NONE, NONE, Prec.none)
     | T.WHILE => makeRule (NONE, NONE, Prec.none)
     | T.ERROR => makeRule (NONE, NONE, Prec.none)
@@ -223,9 +219,18 @@ struct
     end
 
   and number (parser, chunk) =
-    let val value = valOf (Real.fromString (T.lexeme (#previous parser)))
-    in emitConstant (chunk, parser, value); parser
+    let val n = valOf (Real.fromString (T.lexeme (#previous parser)))
+    in emitConstant (chunk, parser, Value.Number n); parser
     end
+
+  and nil_ (parser, chunk) =
+    (emitByte (chunk, parser, Op.encode Op.NIL); parser)
+
+  and true_ (parser, chunk) =
+    (emitByte (chunk, parser, Op.encode Op.TRUE); parser)
+
+  and false_ (parser, chunk) =
+    (emitByte (chunk, parser, Op.encode Op.FALSE); parser)
 
   and grouping args =
     consume (expression args, T.RIGHT_PAREN, "Expect ')' after expression.")
@@ -239,7 +244,6 @@ struct
     in
       emitReturn (chunk, parser);
       if Debug.printCode then Debug.disassembleChunk (chunk, "code") else ();
-      if hadError parser then raise Error else ();
-      chunk
+      if hadError parser then NONE else SOME chunk
     end
 end

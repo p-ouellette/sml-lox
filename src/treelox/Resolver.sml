@@ -9,9 +9,9 @@ struct
   structure M = StringMap
 
   structure FunctionType =
-  struct datatype t = NONE | FUNCTION | INITIALIZER | METHOD end
+  struct datatype t = None | Function | Initializer | Method end
 
-  structure ClassType = struct datatype t = NONE | CLASS | SUBCLASS end
+  structure ClassType = struct datatype t = None | Class | Subclass end
 
   fun beginScope scopes = M.empty :: scopes
   fun endScope scopes = tl scopes
@@ -34,19 +34,19 @@ struct
         let
           val class =
             case superclass of
-              NONE => ClassType.CLASS
+              NONE => ClassType.Class
             | SOME st =>
                 ( if #lexeme st = #lexeme name then
                     Error.errorAt (st, "A class can't inherit from itself.")
                   else
                     ()
-                ; ClassType.SUBCLASS
+                ; ClassType.Subclass
                 )
           fun resolveMethod (method, ss) =
             let
               val func =
-                if #lexeme (#name method) = "init" then FunctionType.INITIALIZER
-                else FunctionType.METHOD
+                if #lexeme (#name method) = "init" then FunctionType.Initializer
+                else FunctionType.Method
             in
               resolveFunction {func = func, class = class} (method, ss)
             end
@@ -57,7 +57,7 @@ struct
     | resolveStmt {class, ...} (Stmt.Function f, ss) =
         let
           val ss = define (declare (ss, #name f), #name f)
-          val ctx = {func = FunctionType.FUNCTION, class = class}
+          val ctx = {func = FunctionType.Function, class = class}
         in
           resolveFunction ctx (f, ss)
         end
@@ -77,14 +77,14 @@ struct
         end
     | resolveStmt ctx (Stmt.Print expr, ss) = resolveExpr ctx (expr, ss)
     | resolveStmt ctx (Stmt.Return (token, expr), ss) =
-        ( if #func ctx = FunctionType.NONE then
+        ( if #func ctx = FunctionType.None then
             Error.errorAt (token, "Can't return from top-level code.")
           else
             ()
         ; case expr of
             Expr.Nil => ()
           | _ =>
-              if #func ctx = FunctionType.INITIALIZER then
+              if #func ctx = FunctionType.Initializer then
                 Error.errorAt
                   (token, "Can't return a value from an initializer.")
               else
@@ -119,7 +119,7 @@ struct
         )
     | resolveExpr _ (Expr.Variable _, ss) = ss
     | resolveExpr ctx (Expr.This keyword, ss) =
-        ( if #class ctx = ClassType.NONE then
+        ( if #class ctx = ClassType.None then
             Error.errorAt (keyword, "Can't use 'this' outside of a class.")
           else
             ()
@@ -128,12 +128,12 @@ struct
     | resolveExpr ctx (Expr.Grouping expr, ss) = resolveExpr ctx (expr, ss)
     | resolveExpr ctx (Expr.Super {keyword, ...}, ss) =
         ( case #class ctx of
-            ClassType.NONE =>
+            ClassType.None =>
               Error.errorAt (keyword, "Can't use 'super' outside of a class.")
-          | ClassType.CLASS =>
+          | ClassType.Class =>
               Error.errorAt
                 (keyword, "Can't use 'super' in a class with no superclass.")
-          | ClassType.SUBCLASS => ()
+          | ClassType.Subclass => ()
         ; ss
         )
     | resolveExpr ctx (Expr.Call {callee, arguments, ...}, ss) =
@@ -149,7 +149,7 @@ struct
     | resolveExpr ctx (Expr.Assign (_, value), ss) = resolveExpr ctx (value, ss)
 
   and resolve stmts =
-    let val ctx = {func = FunctionType.NONE, class = ClassType.NONE}
+    let val ctx = {func = FunctionType.None, class = ClassType.None}
     in ignore (resolveStmts (stmts, [], ctx))
     end
 

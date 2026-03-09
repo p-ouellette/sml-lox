@@ -18,7 +18,7 @@ struct
 
   fun newParser source =
     let
-      val dummy = {kind = T.EOF, lexeme = "", line = 0}
+      val dummy = {kind = T.Eof, lexeme = "", line = 0}
     in
       { scanner = Scanner.new source
       , current = dummy
@@ -44,8 +44,8 @@ struct
       ( (#panicMode parser) := true
       ; eprint ("[line " ^ Int.toString (T.line token) ^ "] Error")
       ; case T.kind token of
-          T.EOF => eprint " at end"
-        | T.ERROR => ()
+          T.Eof => eprint " at end"
+        | T.Error => ()
         | _ => eprint (" at '" ^ T.lexeme token ^ "'")
       ; eprint (": " ^ message ^ "\n")
       ; (#hadError parser) := true
@@ -71,7 +71,7 @@ struct
             , panicMode = #panicMode parser
             }
         in
-          if T.kind current = T.ERROR then loop parser else parser
+          if T.kind current = T.Error then loop parser else parser
         end
     in
       loop parser
@@ -88,7 +88,7 @@ struct
     (emitByte (chunk, parser, byte1); emitByte (chunk, parser, byte2))
 
   fun emitReturn (chunk, parser) =
-    emitByte (chunk, parser, Op.encode Op.RETURN)
+    emitByte (chunk, parser, Op.encode Op.Return)
 
   fun makeConstant (chunk, parser, value) =
     let
@@ -101,7 +101,7 @@ struct
 
   fun emitConstant (chunk, parser, value) =
     let val constant = makeConstant (chunk, parser, value)
-    in emitBytes (chunk, parser, Op.encode Op.CONSTANT, constant)
+    in emitBytes (chunk, parser, Op.encode Op.Constant, constant)
     end
 
   structure Precedence =
@@ -125,46 +125,46 @@ struct
 
   fun getRule tokenKind =
     case tokenKind of
-      T.LEFT_PAREN => makeRule (SOME grouping, NONE, Prec.none)
-    | T.RIGHT_PAREN => makeRule (NONE, NONE, Prec.none)
-    | T.LEFT_BRACE => makeRule (NONE, NONE, Prec.none)
-    | T.RIGHT_BRACE => makeRule (NONE, NONE, Prec.none)
-    | T.COMMA => makeRule (NONE, NONE, Prec.none)
-    | T.DOT => makeRule (NONE, NONE, Prec.none)
-    | T.MINUS => makeRule (SOME unary, SOME binary, Prec.term)
-    | T.PLUS => makeRule (NONE, SOME binary, Prec.term)
-    | T.SEMICOLON => makeRule (NONE, NONE, Prec.none)
-    | T.SLASH => makeRule (NONE, SOME binary, Prec.factor)
-    | T.STAR => makeRule (NONE, SOME binary, Prec.factor)
-    | T.BANG => makeRule (NONE, NONE, Prec.none)
-    | T.BANG_EQUAL => makeRule (NONE, NONE, Prec.none)
-    | T.EQUAL => makeRule (NONE, NONE, Prec.none)
-    | T.EQUAL_EQUAL => makeRule (NONE, NONE, Prec.none)
-    | T.GREATER => makeRule (NONE, NONE, Prec.none)
-    | T.GREATER_EQUAL => makeRule (NONE, NONE, Prec.none)
-    | T.LESS => makeRule (NONE, NONE, Prec.none)
-    | T.LESS_EQUAL => makeRule (NONE, NONE, Prec.none)
-    | T.IDENTIFIER => makeRule (NONE, NONE, Prec.none)
-    | T.STRING => makeRule (NONE, NONE, Prec.none)
-    | T.NUMBER => makeRule (SOME number, NONE, Prec.none)
-    | T.AND => makeRule (NONE, NONE, Prec.none)
-    | T.CLASS => makeRule (NONE, NONE, Prec.none)
-    | T.ELSE => makeRule (NONE, NONE, Prec.none)
-    | T.FALSE => makeRule (SOME false_, NONE, Prec.none)
-    | T.FUN => makeRule (NONE, NONE, Prec.none)
-    | T.FOR => makeRule (NONE, NONE, Prec.none)
-    | T.IF => makeRule (NONE, NONE, Prec.none)
-    | T.NIL => makeRule (SOME nil_, NONE, Prec.none)
-    | T.OR => makeRule (NONE, NONE, Prec.none)
-    | T.PRINT => makeRule (NONE, NONE, Prec.none)
-    | T.RETURN => makeRule (NONE, NONE, Prec.none)
-    | T.SUPER => makeRule (NONE, NONE, Prec.none)
-    | T.THIS => makeRule (NONE, NONE, Prec.none)
-    | T.TRUE => makeRule (SOME true_, NONE, Prec.none)
-    | T.VAR => makeRule (NONE, NONE, Prec.none)
-    | T.WHILE => makeRule (NONE, NONE, Prec.none)
-    | T.ERROR => makeRule (NONE, NONE, Prec.none)
-    | T.EOF => makeRule (NONE, NONE, Prec.none)
+      T.LeftParen => makeRule (SOME grouping, NONE, Prec.none)
+    | T.RightParen => makeRule (NONE, NONE, Prec.none)
+    | T.LeftBrace => makeRule (NONE, NONE, Prec.none)
+    | T.RightBrace => makeRule (NONE, NONE, Prec.none)
+    | T.Comma => makeRule (NONE, NONE, Prec.none)
+    | T.Dot => makeRule (NONE, NONE, Prec.none)
+    | T.Minus => makeRule (SOME unary, SOME binary, Prec.term)
+    | T.Plus => makeRule (NONE, SOME binary, Prec.term)
+    | T.Semicolon => makeRule (NONE, NONE, Prec.none)
+    | T.Slash => makeRule (NONE, SOME binary, Prec.factor)
+    | T.Star => makeRule (NONE, SOME binary, Prec.factor)
+    | T.Bang => makeRule (NONE, NONE, Prec.none)
+    | T.BangEqual => makeRule (NONE, NONE, Prec.none)
+    | T.Equal => makeRule (NONE, NONE, Prec.none)
+    | T.EqualEqual => makeRule (NONE, NONE, Prec.none)
+    | T.Greater => makeRule (NONE, NONE, Prec.none)
+    | T.GreaterEqual => makeRule (NONE, NONE, Prec.none)
+    | T.Less => makeRule (NONE, NONE, Prec.none)
+    | T.LessEqual => makeRule (NONE, NONE, Prec.none)
+    | T.Identifier => makeRule (NONE, NONE, Prec.none)
+    | T.String => makeRule (NONE, NONE, Prec.none)
+    | T.Number => makeRule (SOME number, NONE, Prec.none)
+    | T.And => makeRule (NONE, NONE, Prec.none)
+    | T.Class => makeRule (NONE, NONE, Prec.none)
+    | T.Else => makeRule (NONE, NONE, Prec.none)
+    | T.False => makeRule (SOME false_, NONE, Prec.none)
+    | T.Fun => makeRule (NONE, NONE, Prec.none)
+    | T.For => makeRule (NONE, NONE, Prec.none)
+    | T.If => makeRule (NONE, NONE, Prec.none)
+    | T.Nil => makeRule (SOME nil_, NONE, Prec.none)
+    | T.Or => makeRule (NONE, NONE, Prec.none)
+    | T.Print => makeRule (NONE, NONE, Prec.none)
+    | T.Return => makeRule (NONE, NONE, Prec.none)
+    | T.Super => makeRule (NONE, NONE, Prec.none)
+    | T.This => makeRule (NONE, NONE, Prec.none)
+    | T.True => makeRule (SOME true_, NONE, Prec.none)
+    | T.Var => makeRule (NONE, NONE, Prec.none)
+    | T.While => makeRule (NONE, NONE, Prec.none)
+    | T.Error => makeRule (NONE, NONE, Prec.none)
+    | T.Eof => makeRule (NONE, NONE, Prec.none)
 
   and parsePrecedence (parser, chunk, precedence) =
     let
@@ -199,10 +199,10 @@ struct
       val parser' = parsePrecedence (parser, chunk, #precedence rule + 1)
     in
       case operatorKind of
-        T.PLUS => emitByte (chunk, parser, Op.encode Op.ADD)
-      | T.MINUS => emitByte (chunk, parser, Op.encode Op.SUBTRACT)
-      | T.STAR => emitByte (chunk, parser, Op.encode Op.MULTIPLY)
-      | T.SLASH => emitByte (chunk, parser, Op.encode Op.DIVIDE)
+        T.Plus => emitByte (chunk, parser, Op.encode Op.Add)
+      | T.Minus => emitByte (chunk, parser, Op.encode Op.Subtract)
+      | T.Star => emitByte (chunk, parser, Op.encode Op.Multiply)
+      | T.Slash => emitByte (chunk, parser, Op.encode Op.Divide)
       | _ => raise Fail "expected binary operator";
       parser'
     end
@@ -213,7 +213,7 @@ struct
       val parser' = parsePrecedence (parser, chunk, Prec.unary)
     in
       case operatorKind of
-        T.MINUS => emitByte (chunk, parser, Op.encode Op.NEGATE)
+        T.Minus => emitByte (chunk, parser, Op.encode Op.Negate)
       | _ => raise Fail "expected unary operator";
       parser'
     end
@@ -224,23 +224,23 @@ struct
     end
 
   and nil_ (parser, chunk) =
-    (emitByte (chunk, parser, Op.encode Op.NIL); parser)
+    (emitByte (chunk, parser, Op.encode Op.Nil); parser)
 
   and true_ (parser, chunk) =
-    (emitByte (chunk, parser, Op.encode Op.TRUE); parser)
+    (emitByte (chunk, parser, Op.encode Op.True); parser)
 
   and false_ (parser, chunk) =
-    (emitByte (chunk, parser, Op.encode Op.FALSE); parser)
+    (emitByte (chunk, parser, Op.encode Op.False); parser)
 
   and grouping args =
-    consume (expression args, T.RIGHT_PAREN, "Expect ')' after expression.")
+    consume (expression args, T.RightParen, "Expect ')' after expression.")
 
   fun compile source =
     let
       val chunk = Chunk.new ()
       val parser = advance (newParser source)
       val parser = expression (parser, chunk)
-      val parser = consume (parser, T.EOF, "Expect end of expression.")
+      val parser = consume (parser, T.Eof, "Expect end of expression.")
     in
       emitReturn (chunk, parser);
       if Debug.printCode then Debug.disassembleChunk (chunk, "code") else ();

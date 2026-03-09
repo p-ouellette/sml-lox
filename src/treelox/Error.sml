@@ -30,7 +30,7 @@ struct
 
   fun error (line, msg) = report (line, "", msg)
 
-  fun errorAt ({token = Token.EOF, line, lexeme = _}, msg) =
+  fun errorAt ({token = Token.Eof, line, lexeme = _}, msg) =
         report (line, " at end", msg)
     | errorAt ({line, lexeme, ...}, msg) =
         report (line, " at '" ^ lexeme ^ "'", msg)

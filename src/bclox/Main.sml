@@ -20,9 +20,9 @@ struct
     in
       TIO.closeIn strm;
       case VM.interpret prog of
-        VM.OK => Status.success
-      | VM.COMPILE_ERROR => Status.parseError
-      | VM.RUNTIME_ERROR => Status.runtimeError
+        VM.Ok => Status.success
+      | VM.CompileError => Status.parseError
+      | VM.RuntimeError => Status.runtimeError
     end
 
   fun runPrompt () =

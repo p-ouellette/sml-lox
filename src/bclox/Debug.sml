@@ -51,15 +51,15 @@ struct
         print (StringCvt.padLeft #" " 4 (Int.toString line) ^ " ");
 
       case Chunk.getOpcode (chunk, offset) of
-        OP.CONSTANT => constantInstruction ("OP_CONSTANT", chunk, offset)
-      | OP.NIL => simpleInstruction ("OP_NIL", offset)
-      | OP.TRUE => simpleInstruction ("OP_TRUE", offset)
-      | OP.FALSE => simpleInstruction ("OP_FALSE", offset)
-      | OP.ADD => simpleInstruction ("OP_ADD", offset)
-      | OP.SUBTRACT => simpleInstruction ("OP_SUBTRACT", offset)
-      | OP.MULTIPLY => simpleInstruction ("OP_MULTIPLY", offset)
-      | OP.DIVIDE => simpleInstruction ("OP_DIVIDE", offset)
-      | OP.NEGATE => simpleInstruction ("OP_NEGATE", offset)
-      | OP.RETURN => simpleInstruction ("OP_RETURN", offset)
+        OP.Constant => constantInstruction ("OP_CONSTANT", chunk, offset)
+      | OP.Nil => simpleInstruction ("OP_NIL", offset)
+      | OP.True => simpleInstruction ("OP_TRUE", offset)
+      | OP.False => simpleInstruction ("OP_FALSE", offset)
+      | OP.Add => simpleInstruction ("OP_ADD", offset)
+      | OP.Subtract => simpleInstruction ("OP_SUBTRACT", offset)
+      | OP.Multiply => simpleInstruction ("OP_MULTIPLY", offset)
+      | OP.Divide => simpleInstruction ("OP_DIVIDE", offset)
+      | OP.Negate => simpleInstruction ("OP_NEGATE", offset)
+      | OP.Return => simpleInstruction ("OP_RETURN", offset)
     end
 end

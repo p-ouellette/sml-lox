@@ -233,8 +233,8 @@ struct
       val (right, env) = evaluate (right, env)
     in
       case #token operator of
-        T.MINUS => (V.Number (~(numberOperand (operator, right))), env)
-      | T.BANG => (V.Boolean (not (V.isTruthy right)), env)
+        T.Minus => (V.Number (~(numberOperand (operator, right))), env)
+      | T.Bang => (V.Boolean (not (V.isTruthy right)), env)
       | _ => raise Fail "invalid unary operator"
     end
 
@@ -245,16 +245,16 @@ struct
       fun numOperands () = numberOperands (operator, left, right)
     in
       case #token operator of
-        T.BANG_EQUAL => (V.Boolean (not (V.isEqual (left, right))), env)
-      | T.EQUAL_EQUAL => (V.Boolean (V.isEqual (left, right)), env)
-      | T.GREATER => (V.Boolean (op> (numOperands ())), env)
-      | T.GREATER_EQUAL => (V.Boolean (op>= (numOperands ())), env)
-      | T.LESS => (V.Boolean (op< (numOperands ())), env)
-      | T.LESS_EQUAL => (V.Boolean (op<= (numOperands ())), env)
-      | T.MINUS => (V.Number (op- (numOperands ())), env)
-      | T.SLASH => (V.Number (op/ (numOperands ())), env)
-      | T.STAR => (V.Number (op* (numOperands ())), env)
-      | T.PLUS =>
+        T.BangEqual => (V.Boolean (not (V.isEqual (left, right))), env)
+      | T.EqualEqual => (V.Boolean (V.isEqual (left, right)), env)
+      | T.Greater => (V.Boolean (op> (numOperands ())), env)
+      | T.GreaterEqual => (V.Boolean (op>= (numOperands ())), env)
+      | T.Less => (V.Boolean (op< (numOperands ())), env)
+      | T.LessEqual => (V.Boolean (op<= (numOperands ())), env)
+      | T.Minus => (V.Number (op- (numOperands ())), env)
+      | T.Slash => (V.Number (op/ (numOperands ())), env)
+      | T.Star => (V.Number (op* (numOperands ())), env)
+      | T.Plus =>
           (case (left, right) of
              (V.Number x, V.Number y) => (V.Number (x + y), env)
            | (V.String x, V.String y) => (V.String (x ^ y), env)
@@ -269,8 +269,8 @@ struct
       val (left, env) = evaluate (left, env)
     in
       case #token operator of
-        T.OR => if V.isTruthy left then (left, env) else evaluate (right, env)
-      | T.AND => if V.isTruthy left then evaluate (right, env) else (left, env)
+        T.Or => if V.isTruthy left then (left, env) else evaluate (right, env)
+      | T.And => if V.isTruthy left then evaluate (right, env) else (left, env)
       | _ => raise Fail "invalid logical operator"
     end
 

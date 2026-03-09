@@ -36,23 +36,23 @@ struct
     }
 
   val identifierType =
-    fn "and" => T.AND
-     | "class" => T.CLASS
-     | "else" => T.ELSE
-     | "false" => T.FALSE
-     | "for" => T.FOR
-     | "fun" => T.FUN
-     | "if" => T.IF
-     | "nil" => T.NIL
-     | "or" => T.OR
-     | "print" => T.PRINT
-     | "return" => T.RETURN
-     | "super" => T.SUPER
-     | "this" => T.THIS
-     | "true" => T.TRUE
-     | "var" => T.VAR
-     | "while" => T.WHILE
-     | _ => T.IDENTIFIER
+    fn "and" => T.And
+     | "class" => T.Class
+     | "else" => T.Else
+     | "false" => T.False
+     | "for" => T.For
+     | "fun" => T.Fun
+     | "if" => T.If
+     | "nil" => T.Nil
+     | "or" => T.Or
+     | "print" => T.Print
+     | "return" => T.Return
+     | "super" => T.Super
+     | "this" => T.This
+     | "true" => T.True
+     | "var" => T.Var
+     | "while" => T.While
+     | _ => T.Identifier
 
   fun scan (s: t) =
     let
@@ -62,7 +62,7 @@ struct
         (makeToken (s, start, kind), s)
 
       fun error (s: t, message) =
-        ({kind = T.ERROR, lexeme = message, line = #line s}, s)
+        ({kind = T.Error, lexeme = message, line = #line s}, s)
 
       fun match (s, expected, ok, fail) =
         case getc s of
@@ -73,11 +73,11 @@ struct
       fun slashOrComment s =
         case getc s of
           SOME (#"/", s') => scan (dropl (fn c => c <> #"\n") s')
-        | _ => token (s, T.SLASH)
+        | _ => token (s, T.Slash)
 
       fun string s =
         case getc s of
-          SOME (#"\"", s') => token (s', T.STRING)
+          SOME (#"\"", s') => token (s', T.String)
         | SOME (_, s') => string s'
         | NONE => error (s, "Unterminated string.")
 
@@ -92,7 +92,7 @@ struct
                 end
             | _ => sInt
         in
-          token (s, T.NUMBER)
+          token (s, T.Number)
         end
 
       fun identifier s =
@@ -104,20 +104,20 @@ struct
         end
 
       val scan' =
-        fn (#"(", s) => token (s, T.LEFT_PAREN)
-         | (#")", s) => token (s, T.RIGHT_PAREN)
-         | (#"{", s) => token (s, T.LEFT_BRACE)
-         | (#"}", s) => token (s, T.RIGHT_BRACE)
-         | (#";", s) => token (s, T.SEMICOLON)
-         | (#",", s) => token (s, T.COMMA)
-         | (#".", s) => token (s, T.DOT)
-         | (#"-", s) => token (s, T.MINUS)
-         | (#"+", s) => token (s, T.PLUS)
-         | (#"*", s) => token (s, T.STAR)
-         | (#"!", s) => match (s, #"=", T.BANG_EQUAL, T.BANG)
-         | (#"=", s) => match (s, #"=", T.EQUAL_EQUAL, T.EQUAL)
-         | (#"<", s) => match (s, #"=", T.LESS_EQUAL, T.LESS)
-         | (#">", s) => match (s, #"=", T.GREATER_EQUAL, T.GREATER)
+        fn (#"(", s) => token (s, T.LeftParen)
+         | (#")", s) => token (s, T.RightParen)
+         | (#"{", s) => token (s, T.LeftBrace)
+         | (#"}", s) => token (s, T.RightBrace)
+         | (#";", s) => token (s, T.Semicolon)
+         | (#",", s) => token (s, T.Comma)
+         | (#".", s) => token (s, T.Dot)
+         | (#"-", s) => token (s, T.Minus)
+         | (#"+", s) => token (s, T.Plus)
+         | (#"*", s) => token (s, T.Star)
+         | (#"!", s) => match (s, #"=", T.BangEqual, T.Bang)
+         | (#"=", s) => match (s, #"=", T.EqualEqual, T.Equal)
+         | (#"<", s) => match (s, #"=", T.LessEqual, T.Less)
+         | (#">", s) => match (s, #"=", T.GreaterEqual, T.Greater)
          | (#"/", s) => slashOrComment s
          | (#" ", s) => scan s
          | (#"\r", s) => scan s
@@ -130,7 +130,7 @@ struct
           else error (s, "Unexpected character.")
     in
       case getc s of
-        NONE => token (s, T.EOF)
+        NONE => token (s, T.Eof)
       | SOME (c, s) => scan' (c, s)
     end
 end

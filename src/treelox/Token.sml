@@ -2,180 +2,137 @@ structure Token:
 sig
   datatype t =
   (* single-character tokens *)
-    LEFT_PAREN
-  | RIGHT_PAREN
-  | LEFT_BRACE
-  | RIGHT_BRACE
-  | COMMA
-  | DOT
-  | MINUS
-  | PLUS
-  | SEMICOLON
-  | SLASH
-  | STAR
+    LeftParen
+  | RightParen
+  | LeftBrace
+  | RightBrace
+  | Comma
+  | Dot
+  | Minus
+  | Plus
+  | Semicolon
+  | Slash
+  | Star
   (* one or two character tokens *)
-  | BANG
-  | BANG_EQUAL
-  | EQUAL
-  | EQUAL_EQUAL
-  | GREATER
-  | GREATER_EQUAL
-  | LESS
-  | LESS_EQUAL
+  | Bang
+  | BangEqual
+  | Equal
+  | EqualEqual
+  | Greater
+  | GreaterEqual
+  | Less
+  | LessEqual
   (* literals *)
-  | IDENTIFIER
-  | STRING of string
-  | NUMBER of real
+  | Identifier
+  | String of string
+  | Number of real
   (* keywords *)
-  | AND
-  | CLASS
-  | ELSE
-  | FALSE
-  | FUN
-  | FOR
-  | IF
-  | NIL
-  | OR
-  | PRINT
-  | RETURN
-  | SUPER
-  | THIS
-  | TRUE
-  | VAR
-  | WHILE
+  | And
+  | Class
+  | Else
+  | False
+  | Fun
+  | For
+  | If
+  | Nil
+  | Or
+  | Print
+  | Return
+  | Super
+  | This
+  | True
+  | Var
+  | While
 
-  | EOF
+  | Eof
 
   val sameType: t * t -> bool
-
-  val toString: t -> string
 end =
 struct
   datatype t =
-    LEFT_PAREN
-  | RIGHT_PAREN
-  | LEFT_BRACE
-  | RIGHT_BRACE
-  | COMMA
-  | DOT
-  | MINUS
-  | PLUS
-  | SEMICOLON
-  | SLASH
-  | STAR
+    LeftParen
+  | RightParen
+  | LeftBrace
+  | RightBrace
+  | Comma
+  | Dot
+  | Minus
+  | Plus
+  | Semicolon
+  | Slash
+  | Star
 
-  | BANG
-  | BANG_EQUAL
-  | EQUAL
-  | EQUAL_EQUAL
-  | GREATER
-  | GREATER_EQUAL
-  | LESS
-  | LESS_EQUAL
+  | Bang
+  | BangEqual
+  | Equal
+  | EqualEqual
+  | Greater
+  | GreaterEqual
+  | Less
+  | LessEqual
 
-  | IDENTIFIER
-  | STRING of string
-  | NUMBER of real
+  | Identifier
+  | String of string
+  | Number of real
 
-  | AND
-  | CLASS
-  | ELSE
-  | FALSE
-  | FUN
-  | FOR
-  | IF
-  | NIL
-  | OR
-  | PRINT
-  | RETURN
-  | SUPER
-  | THIS
-  | TRUE
-  | VAR
-  | WHILE
+  | And
+  | Class
+  | Else
+  | False
+  | Fun
+  | For
+  | If
+  | Nil
+  | Or
+  | Print
+  | Return
+  | Super
+  | This
+  | True
+  | Var
+  | While
 
-  | EOF
+  | Eof
 
   val sameType =
-    fn (LEFT_PAREN, LEFT_PAREN) => true
-     | (RIGHT_PAREN, RIGHT_PAREN) => true
-     | (LEFT_BRACE, LEFT_BRACE) => true
-     | (RIGHT_BRACE, RIGHT_BRACE) => true
-     | (COMMA, COMMA) => true
-     | (DOT, DOT) => true
-     | (MINUS, MINUS) => true
-     | (PLUS, PLUS) => true
-     | (SEMICOLON, SEMICOLON) => true
-     | (SLASH, SLASH) => true
-     | (STAR, STAR) => true
-     | (BANG, BANG) => true
-     | (BANG_EQUAL, BANG_EQUAL) => true
-     | (EQUAL, EQUAL) => true
-     | (EQUAL_EQUAL, EQUAL_EQUAL) => true
-     | (GREATER, GREATER) => true
-     | (GREATER_EQUAL, GREATER_EQUAL) => true
-     | (LESS, LESS) => true
-     | (LESS_EQUAL, LESS_EQUAL) => true
-     | (IDENTIFIER, IDENTIFIER) => true
-     | (STRING _, STRING _) => true
-     | (NUMBER _, NUMBER _) => true
-     | (AND, AND) => true
-     | (CLASS, CLASS) => true
-     | (ELSE, ELSE) => true
-     | (FALSE, FALSE) => true
-     | (FUN, FUN) => true
-     | (FOR, FOR) => true
-     | (IF, IF) => true
-     | (NIL, NIL) => true
-     | (OR, OR) => true
-     | (PRINT, PRINT) => true
-     | (RETURN, RETURN) => true
-     | (SUPER, SUPER) => true
-     | (THIS, THIS) => true
-     | (TRUE, TRUE) => true
-     | (VAR, VAR) => true
-     | (WHILE, WHILE) => true
-     | (EOF, EOF) => true
+    fn (LeftParen, LeftParen) => true
+     | (RightParen, RightParen) => true
+     | (LeftBrace, LeftBrace) => true
+     | (RightBrace, RightBrace) => true
+     | (Comma, Comma) => true
+     | (Dot, Dot) => true
+     | (Minus, Minus) => true
+     | (Plus, Plus) => true
+     | (Semicolon, Semicolon) => true
+     | (Slash, Slash) => true
+     | (Star, Star) => true
+     | (Bang, Bang) => true
+     | (BangEqual, BangEqual) => true
+     | (Equal, Equal) => true
+     | (EqualEqual, EqualEqual) => true
+     | (Greater, Greater) => true
+     | (GreaterEqual, GreaterEqual) => true
+     | (Less, Less) => true
+     | (LessEqual, LessEqual) => true
+     | (Identifier, Identifier) => true
+     | (String _, String _) => true
+     | (Number _, Number _) => true
+     | (And, And) => true
+     | (Class, Class) => true
+     | (Else, Else) => true
+     | (False, False) => true
+     | (Fun, Fun) => true
+     | (For, For) => true
+     | (If, If) => true
+     | (Nil, Nil) => true
+     | (Or, Or) => true
+     | (Print, Print) => true
+     | (Return, Return) => true
+     | (Super, Super) => true
+     | (This, This) => true
+     | (True, True) => true
+     | (Var, Var) => true
+     | (While, While) => true
+     | (Eof, Eof) => true
      | _ => false
-
-  val toString =
-    fn LEFT_PAREN => "LEFT_PAREN"
-     | RIGHT_PAREN => "RIGHT_PAREN"
-     | LEFT_BRACE => "LEFT_BRACE"
-     | RIGHT_BRACE => "RIGHT_BRACE"
-     | COMMA => "COMMA"
-     | DOT => "DOT"
-     | MINUS => "MINUS"
-     | PLUS => "PLUS"
-     | SEMICOLON => "SEMICOLON"
-     | SLASH => "SLASH"
-     | STAR => "STAR"
-     | BANG => "BANG"
-     | BANG_EQUAL => "BANG_EQUAL"
-     | EQUAL => "EQUAL"
-     | EQUAL_EQUAL => "EQUAL_EQUAL"
-     | GREATER => "GREATER"
-     | GREATER_EQUAL => "GREATER_EQUAL"
-     | LESS => "LESS"
-     | LESS_EQUAL => "LESS_EQUAL"
-     | IDENTIFIER => "IDENTIFIER"
-     | STRING s => "STRING " ^ s
-     | NUMBER n => "NUMBER " ^ Real.toString n
-     | AND => "AND"
-     | CLASS => "CLASS"
-     | ELSE => "ELSE"
-     | FALSE => "FALSE"
-     | FUN => "FUN"
-     | FOR => "FOR"
-     | IF => "IF"
-     | NIL => "NIL"
-     | OR => "OR"
-     | PRINT => "PRINT"
-     | RETURN => "RETURN"
-     | SUPER => "SUPER"
-     | THIS => "THIS"
-     | TRUE => "TRUE"
-     | VAR => "VAR"
-     | WHILE => "WHILE"
-     | EOF => "EOF"
 end

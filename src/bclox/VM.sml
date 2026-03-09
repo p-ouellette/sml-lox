@@ -1,6 +1,6 @@
 structure VM:
 sig
-  datatype result = OK | COMPILE_ERROR | RUNTIME_ERROR
+  datatype result = Ok | CompileError | RuntimeError
 
   val interpret: string -> result
 end =
@@ -8,7 +8,7 @@ struct
   structure OP = Opcode
   structure V = Value
 
-  datatype result = OK | COMPILE_ERROR | RUNTIME_ERROR
+  datatype result = Ok | CompileError | RuntimeError
 
   fun push (stack, value) = value :: stack
 
@@ -24,7 +24,7 @@ struct
     in
       eprint (message ^ "\n");
       eprint ("[line " ^ Int.toString line ^ "] in script\n");
-      RUNTIME_ERROR
+      RuntimeError
     end
 
   fun readConstant (chunk, i) =
@@ -53,16 +53,16 @@ struct
         ();
 
       case Chunk.getOpcode (chunk, ip) of
-        OP.CONSTANT =>
+        OP.Constant =>
           run (chunk, ip + 2, push (stack, readConstant (chunk, ip + 1)))
-      | OP.NIL => run (chunk, ip + 1, push (stack, V.Nil))
-      | OP.TRUE => run (chunk, ip + 1, push (stack, V.Boolean true))
-      | OP.FALSE => run (chunk, ip + 1, push (stack, V.Boolean false))
-      | OP.ADD => binaryOp op+
-      | OP.SUBTRACT => binaryOp op-
-      | OP.MULTIPLY => binaryOp op*
-      | OP.DIVIDE => binaryOp op/
-      | OP.NEGATE =>
+      | OP.Nil => run (chunk, ip + 1, push (stack, V.Nil))
+      | OP.True => run (chunk, ip + 1, push (stack, V.Boolean true))
+      | OP.False => run (chunk, ip + 1, push (stack, V.Boolean false))
+      | OP.Add => binaryOp op+
+      | OP.Subtract => binaryOp op-
+      | OP.Multiply => binaryOp op*
+      | OP.Divide => binaryOp op/
+      | OP.Negate =>
           let
             val (v, stack) = pop stack
           in
@@ -70,11 +70,11 @@ struct
               V.Number n => run (chunk, ip + 1, push (stack, V.Number (~n)))
             | _ => runtimeError (chunk, ip, "Operand must be a number.")
           end
-      | OP.RETURN => let val (v, _) = pop stack in V.print v; print "\n"; OK end
+      | OP.Return => let val (v, _) = pop stack in V.print v; print "\n"; Ok end
     end
 
   fun interpret source =
     case Compiler.compile source of
       SOME chunk => run (chunk, 0, [])
-    | NONE => COMPILE_ERROR
+    | NONE => CompileError
 end

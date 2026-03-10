@@ -5,6 +5,9 @@ sig
   | Nil
   | True
   | False
+  | Equal
+  | Greater
+  | Less
   | Add
   | Subtract
   | Multiply
@@ -22,6 +25,9 @@ struct
   | Nil
   | True
   | False
+  | Equal
+  | Greater
+  | Less
   | Add
   | Subtract
   | Multiply
@@ -35,25 +41,31 @@ struct
      | Nil => 0w1
      | True => 0w2
      | False => 0w3
-     | Add => 0w4
-     | Subtract => 0w5
-     | Multiply => 0w6
-     | Divide => 0w7
-     | Not => 0w8
-     | Negate => 0w9
-     | Return => 0w10
+     | Equal => 0w4
+     | Greater => 0w5
+     | Less => 0w6
+     | Add => 0w7
+     | Subtract => 0w8
+     | Multiply => 0w9
+     | Divide => 0w10
+     | Not => 0w11
+     | Negate => 0w12
+     | Return => 0w13
 
   val decode =
     fn 0w0 => Constant
      | 0w1 => Nil
      | 0w2 => True
      | 0w3 => False
-     | 0w4 => Add
-     | 0w5 => Subtract
-     | 0w6 => Multiply
-     | 0w7 => Divide
-     | 0w8 => Not
-     | 0w9 => Negate
-     | 0w10 => Return
+     | 0w4 => Equal
+     | 0w5 => Greater
+     | 0w6 => Less
+     | 0w7 => Add
+     | 0w8 => Subtract
+     | 0w9 => Multiply
+     | 0w10 => Divide
+     | 0w11 => Not
+     | 0w12 => Negate
+     | 0w13 => Return
      | opcode => raise Fail ("invalid opcode " ^ Word8.toString opcode)
 end

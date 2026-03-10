@@ -32,14 +32,17 @@ struct
 
   fun run (chunk, ip, stack) =
     let
-      fun binaryOp f =
+      fun continue (offset, stack) =
+        run (chunk, ip + offset, stack)
+
+      fun binaryOp (cons, f) =
         let
           val (b, stack) = pop stack
           val (a, stack) = pop stack
         in
           case (a, b) of
             (V.Number a, V.Number b) =>
-              run (chunk, ip + 1, push (stack, V.Number (f (a, b))))
+              continue (1, push (stack, cons (f (a, b))))
           | _ => runtimeError (chunk, ip, "Operands must be numbers.")
         end
     in
@@ -53,25 +56,33 @@ struct
         ();
 
       case Chunk.getOpcode (chunk, ip) of
-        Op.Constant =>
-          run (chunk, ip + 2, push (stack, readConstant (chunk, ip + 1)))
-      | Op.Nil => run (chunk, ip + 1, push (stack, V.Nil))
-      | Op.True => run (chunk, ip + 1, push (stack, V.Boolean true))
-      | Op.False => run (chunk, ip + 1, push (stack, V.Boolean false))
-      | Op.Add => binaryOp op+
-      | Op.Subtract => binaryOp op-
-      | Op.Multiply => binaryOp op*
-      | Op.Divide => binaryOp op/
+        Op.Constant => continue (2, push (stack, readConstant (chunk, ip + 1)))
+      | Op.Nil => continue (1, push (stack, V.Nil))
+      | Op.True => continue (1, push (stack, V.Boolean true))
+      | Op.False => continue (1, push (stack, V.Boolean false))
+      | Op.Equal =>
+          let
+            val (a, stack) = pop stack
+            val (b, stack) = pop stack
+          in
+            continue (1, push (stack, V.Boolean (V.isEqual (a, b))))
+          end
+      | Op.Greater => binaryOp (V.Boolean, op>)
+      | Op.Less => binaryOp (V.Boolean, op<)
+      | Op.Add => binaryOp (V.Number, op+)
+      | Op.Subtract => binaryOp (V.Number, op-)
+      | Op.Multiply => binaryOp (V.Number, op*)
+      | Op.Divide => binaryOp (V.Number, op/)
       | Op.Not =>
           let val (v, stack) = pop stack
-          in run (chunk, ip + 1, push (stack, V.Boolean (V.isFalsy v)))
+          in continue (1, push (stack, V.Boolean (V.isFalsy v)))
           end
       | Op.Negate =>
           let
             val (v, stack) = pop stack
           in
             case v of
-              V.Number n => run (chunk, ip + 1, push (stack, V.Number (~n)))
+              V.Number n => continue (1, push (stack, V.Number (~n)))
             | _ => runtimeError (chunk, ip, "Operand must be a number.")
           end
       | Op.Return => let val (v, _) = pop stack in V.print v; print "\n"; Ok end

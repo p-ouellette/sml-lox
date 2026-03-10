@@ -12,6 +12,6 @@ src/<interpreter>/sources.cm` to load an interpreter into the SML/NJ REPL.
 ## Status
 
 treelox passes the jlox [test suite][test-suite].
-bclox passes the clox test suite for chapter 17.
+bclox passes the clox test suite for chapter 18.
 
 [test-suite]: https://github.com/munificent/craftinginterpreters?tab=readme-ov-file#testing

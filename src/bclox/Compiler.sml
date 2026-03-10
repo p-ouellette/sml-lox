@@ -81,16 +81,16 @@ struct
     if T.kind (#current parser) = tokenKind then advance parser
     else (errorAtCurrent (parser, message); parser)
 
-  fun emitByte (chunk, parser: parser, byte) =
+  fun emitByte (parser: parser, chunk) byte =
     Chunk.write (chunk, byte, T.line (#previous parser))
 
-  fun emitBytes (chunk, parser, byte1, byte2) =
-    (emitByte (chunk, parser, byte1); emitByte (chunk, parser, byte2))
+  fun emitBytes args (byte1, byte2) =
+    (emitByte args byte1; emitByte args byte2)
 
-  fun emitReturn (chunk, parser) =
-    emitByte (chunk, parser, Op.encode Op.Return)
+  fun emitReturn args =
+    emitByte args (Op.encode Op.Return)
 
-  fun makeConstant (chunk, parser, value) =
+  fun makeConstant (parser, chunk) value =
     let
       val constant = Chunk.addConstant (chunk, value)
     in
@@ -99,9 +99,9 @@ struct
       Word8.fromInt constant
     end
 
-  fun emitConstant (chunk, parser, value) =
-    let val constant = makeConstant (chunk, parser, value)
-    in emitBytes (chunk, parser, Op.encode Op.Constant, constant)
+  fun emitConstant args value =
+    let val constant = makeConstant args value
+    in emitBytes args (Op.encode Op.Constant, constant)
     end
 
   structure Precedence =
@@ -137,13 +137,13 @@ struct
     | T.Slash => makeRule (NONE, SOME binary, Prec.factor)
     | T.Star => makeRule (NONE, SOME binary, Prec.factor)
     | T.Bang => makeRule (SOME unary, NONE, Prec.none)
-    | T.BangEqual => makeRule (NONE, NONE, Prec.none)
+    | T.BangEqual => makeRule (NONE, SOME binary, Prec.equality)
     | T.Equal => makeRule (NONE, NONE, Prec.none)
-    | T.EqualEqual => makeRule (NONE, NONE, Prec.none)
-    | T.Greater => makeRule (NONE, NONE, Prec.none)
-    | T.GreaterEqual => makeRule (NONE, NONE, Prec.none)
-    | T.Less => makeRule (NONE, NONE, Prec.none)
-    | T.LessEqual => makeRule (NONE, NONE, Prec.none)
+    | T.EqualEqual => makeRule (NONE, SOME binary, Prec.comparision)
+    | T.Greater => makeRule (NONE, SOME binary, Prec.comparision)
+    | T.GreaterEqual => makeRule (NONE, SOME binary, Prec.comparision)
+    | T.Less => makeRule (NONE, SOME binary, Prec.comparision)
+    | T.LessEqual => makeRule (NONE, SOME binary, Prec.comparision)
     | T.Identifier => makeRule (NONE, NONE, Prec.none)
     | T.String => makeRule (NONE, NONE, Prec.none)
     | T.Number => makeRule (SOME number, NONE, Prec.none)
@@ -166,7 +166,7 @@ struct
     | T.Error => makeRule (NONE, NONE, Prec.none)
     | T.Eof => makeRule (NONE, NONE, Prec.none)
 
-  and parsePrecedence (parser, chunk, precedence) =
+  and parsePrecedence (parser, chunk) precedence =
     let
       val parser = advance parser
       val rule = getRule (T.kind (#previous parser))
@@ -189,49 +189,54 @@ struct
       parseInfix parser
     end
 
-  and expression (parser, chunk) =
-    parsePrecedence (parser, chunk, Prec.assignment)
+  and expression args = parsePrecedence args Prec.assignment
 
-  and binary (parser, chunk) =
+  and binary (args as (parser, _)) =
     let
       val operatorKind = T.kind (#previous parser)
       val rule = getRule operatorKind
-      val parser' = parsePrecedence (parser, chunk, #precedence rule + 1)
+      val parser' = parsePrecedence args (#precedence rule + 1)
     in
       case operatorKind of
-        T.Plus => emitByte (chunk, parser, Op.encode Op.Add)
-      | T.Minus => emitByte (chunk, parser, Op.encode Op.Subtract)
-      | T.Star => emitByte (chunk, parser, Op.encode Op.Multiply)
-      | T.Slash => emitByte (chunk, parser, Op.encode Op.Divide)
+        T.BangEqual => emitBytes args (Op.encode Op.Equal, Op.encode Op.Not)
+      | T.EqualEqual => emitByte args (Op.encode Op.Equal)
+      | T.Greater => emitByte args (Op.encode Op.Greater)
+      | T.GreaterEqual => emitBytes args (Op.encode Op.Less, Op.encode Op.Not)
+      | T.Less => emitByte args (Op.encode Op.Less)
+      | T.LessEqual => emitBytes args (Op.encode Op.Greater, Op.encode Op.Not)
+      | T.Plus => emitByte args (Op.encode Op.Add)
+      | T.Minus => emitByte args (Op.encode Op.Subtract)
+      | T.Star => emitByte args (Op.encode Op.Multiply)
+      | T.Slash => emitByte args (Op.encode Op.Divide)
       | _ => raise Fail "expected binary operator";
       parser'
     end
 
-  and unary (parser, chunk) =
+  and unary (args as (parser, _)) =
     let
       val operatorKind = T.kind (#previous parser)
-      val parser' = parsePrecedence (parser, chunk, Prec.unary)
+      val parser' = parsePrecedence args Prec.unary
     in
       case operatorKind of
-        T.Bang => emitByte (chunk, parser, Op.encode Op.Not)
-      | T.Minus => emitByte (chunk, parser, Op.encode Op.Negate)
+        T.Bang => emitByte args (Op.encode Op.Not)
+      | T.Minus => emitByte args (Op.encode Op.Negate)
       | _ => raise Fail "expected unary operator";
       parser'
     end
 
-  and number (parser, chunk) =
+  and number (args as (parser, _)) =
     let val n = valOf (Real.fromString (T.lexeme (#previous parser)))
-    in emitConstant (chunk, parser, Value.Number n); parser
+    in emitConstant args (Value.Number n); parser
     end
 
-  and nil_ (parser, chunk) =
-    (emitByte (chunk, parser, Op.encode Op.Nil); parser)
+  and nil_ (args as (parser, _)) =
+    (emitByte args (Op.encode Op.Nil); parser)
 
-  and true_ (parser, chunk) =
-    (emitByte (chunk, parser, Op.encode Op.True); parser)
+  and true_ (args as (parser, _)) =
+    (emitByte args (Op.encode Op.True); parser)
 
-  and false_ (parser, chunk) =
-    (emitByte (chunk, parser, Op.encode Op.False); parser)
+  and false_ (args as (parser, _)) =
+    (emitByte args (Op.encode Op.False); parser)
 
   and grouping args =
     consume (expression args, T.RightParen, "Expect ')' after expression.")
@@ -243,7 +248,7 @@ struct
       val parser = expression (parser, chunk)
       val parser = consume (parser, T.Eof, "Expect end of expression.")
     in
-      emitReturn (chunk, parser);
+      emitReturn (parser, chunk);
       if Debug.printCode then Debug.disassembleChunk (chunk, "code") else ();
       if hadError parser then NONE else SOME chunk
     end

@@ -17,22 +17,24 @@ struct
     let
       val strm = TIO.openIn fname
       val prog = TIO.inputAll strm
+      val () = TIO.closeIn strm
+      val (result, _) = VM.interpret (prog, VM.baseEnv ())
     in
-      TIO.closeIn strm;
-      case VM.interpret prog of
+      case result of
         VM.Ok => Status.success
       | VM.CompileError => Status.parseError
       | VM.RuntimeError => Status.runtimeError
     end
 
-  fun runPrompt () =
+  fun runPrompt env =
     ( print "> "
     ; case TIO.inputLine TIO.stdIn of
         NONE => (print "\n"; Status.success)
-      | SOME s => (VM.interpret s; runPrompt ())
+      | SOME s => let val (_, env) = VM.interpret (s, env) in runPrompt env end
     )
 
-  fun main [] = runPrompt ()
+  fun main [] =
+        runPrompt (VM.baseEnv ())
     | main [fname] = runFile fname
     | main _ =
         (print "Usage: bclox [script]"; Status.usageError)

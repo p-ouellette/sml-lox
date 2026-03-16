@@ -81,6 +81,29 @@ struct
     if T.kind (#current parser) = tokenKind then advance parser
     else (errorAtCurrent (parser, message); parser)
 
+  fun check (parser: parser, tokenKind) =
+    T.kind (#current parser) = tokenKind
+
+  fun match (parser, tokenKind) =
+    if not (check (parser, tokenKind)) then NONE else SOME (advance parser)
+
+  fun synchronize parser =
+    ( (#panicMode parser) := false
+    ; case T.kind (#current parser) of
+        T.Eof => parser
+      | T.Class => parser
+      | T.For => parser
+      | T.Fun => parser
+      | T.If => parser
+      | T.Print => parser
+      | T.Return => parser
+      | T.Var => parser
+      | T.While => parser
+      | _ =>
+          if T.kind (#previous parser) = T.Semicolon then parser
+          else synchronize (advance parser)
+    )
+
   fun emitByte (parser: parser, chunk) byte =
     Chunk.write (chunk, byte, T.line (#previous parser))
 
@@ -103,6 +126,20 @@ struct
     let val constant = makeConstant args value
     in emitBytes args (Op.encode Op.Constant, constant)
     end
+
+  fun identifierConstant args name =
+    makeConstant args (Value.String (T.lexeme name))
+
+  fun parseVariable (parser, chunk) errorMessage =
+    let
+      val parser = consume (parser, T.Identifier, errorMessage)
+      val constant = identifierConstant (parser, chunk) (#previous parser)
+    in
+      (parser, constant)
+    end
+
+  fun defineVariable args global =
+    emitBytes args (Op.encode Op.DefineGlobal, global)
 
   structure Precedence =
   struct
@@ -144,8 +181,8 @@ struct
     | T.GreaterEqual => makeRule (NONE, SOME binary, Prec.comparision)
     | T.Less => makeRule (NONE, SOME binary, Prec.comparision)
     | T.LessEqual => makeRule (NONE, SOME binary, Prec.comparision)
-    | T.Identifier => makeRule (NONE, NONE, Prec.none)
-    | T.String => makeRule (NONE, NONE, Prec.none)
+    | T.Identifier => makeRule (SOME variable, NONE, Prec.none)
+    | T.String => makeRule (SOME string, NONE, Prec.none)
     | T.Number => makeRule (SOME number, NONE, Prec.none)
     | T.And => makeRule (NONE, NONE, Prec.none)
     | T.Class => makeRule (NONE, NONE, Prec.none)
@@ -189,6 +226,58 @@ struct
       parseInfix parser
     end
 
+  and program (args as (parser, chunk)) =
+    case match (parser, T.Eof) of
+      SOME parser' => parser'
+    | NONE => program (declaration args, chunk)
+
+  and declaration (args as (parser, chunk)) =
+    let
+      val parser =
+        case match (parser, T.Var) of
+          SOME parser' => varDeclaration (parser', chunk)
+        | NONE => statement args
+    in
+      if panicMode parser then synchronize parser else parser
+    end
+
+  and varDeclaration (args as (_, chunk)) =
+    let
+      val (parser, global) = parseVariable args "Expect variable name."
+      val parser =
+        case match (parser, T.Equal) of
+          SOME parser' => expression (parser', chunk)
+        | NONE => nil_ (parser, chunk)
+      val parser = consume
+        (parser, T.Semicolon, "Expect ';' after variable declaration.")
+    in
+      defineVariable (parser, chunk) global;
+      parser
+    end
+
+  and statement (args as (parser, chunk)) =
+    case match (parser, T.Print) of
+      SOME parser' => printStatement (parser', chunk)
+    | NONE => expressionStatement args
+
+  and expressionStatement (args as (_, chunk)) =
+    let
+      val parser = expression args
+      val parser = consume (parser, T.Semicolon, "Expect ';' after expression.")
+    in
+      emitByte (parser, chunk) (Op.encode Op.Pop);
+      parser
+    end
+
+  and printStatement (args as (_, chunk)) =
+    let
+      val parser = expression args
+      val parser = consume (parser, T.Semicolon, "Expect ';' after value.")
+    in
+      emitByte (parser, chunk) (Op.encode Op.Print);
+      parser
+    end
+
   and expression args = parsePrecedence args Prec.assignment
 
   and binary (args as (parser, _)) =
@@ -229,6 +318,23 @@ struct
     in emitConstant args (Value.Number n); parser
     end
 
+  and string (args as (parser, _)) =
+    let
+      val lexeme = T.lexeme (#previous parser)
+      val s = String.substring (lexeme, 1, size lexeme - 2)
+    in
+      emitConstant args (Value.String s);
+      parser
+    end
+
+  and variable (args as (parser, _)) =
+    namedVariable args (#previous parser)
+
+  and namedVariable (args as (parser, _)) name =
+    let val constant = identifierConstant args name
+    in emitBytes args (Op.encode Op.GetGlobal, constant); parser
+    end
+
   and nil_ (args as (parser, _)) =
     (emitByte args (Op.encode Op.Nil); parser)
 
@@ -245,8 +351,7 @@ struct
     let
       val chunk = Chunk.new ()
       val parser = advance (newParser source)
-      val parser = expression (parser, chunk)
-      val parser = consume (parser, T.Eof, "Expect end of expression.")
+      val parser = program (parser, chunk)
     in
       emitReturn (parser, chunk);
       if Debug.printCode then Debug.disassembleChunk (chunk, "code") else ();

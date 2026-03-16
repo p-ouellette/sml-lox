@@ -2,11 +2,14 @@ structure VM:
 sig
   datatype result = Ok | CompileError | RuntimeError
 
-  val interpret: string -> result
+  val baseEnv: unit -> Value.t Environment.t
+  val interpret: string * Value.t Environment.t
+                 -> result * Value.t Environment.t
 end =
 struct
   structure Op = Opcode
   structure V = Value
+  structure Env = Environment
 
   datatype result = Ok | CompileError | RuntimeError
 
@@ -27,13 +30,18 @@ struct
       RuntimeError
     end
 
-  fun readConstant (chunk, i) =
-    Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, i)))
+  fun readConstant (chunk, ip) =
+    Chunk.getConstant (chunk, Word8.toInt (Chunk.sub (chunk, ip + 1)))
 
-  fun run (chunk, ip, stack) =
+  fun readString (chunk, ip) =
+    case readConstant (chunk, ip) of
+      V.String s => s
+    | _ => raise Fail "expected string constant"
+
+  fun run (chunk, ip, stack, env) =
     let
-      fun continue (offset, stack) =
-        run (chunk, ip + offset, stack)
+      fun continue (offset, stack, env) =
+        run (chunk, ip + offset, stack, env)
 
       fun binaryOp (cons, f) =
         let
@@ -42,8 +50,8 @@ struct
         in
           case (a, b) of
             (V.Number a, V.Number b) =>
-              continue (1, push (stack, cons (f (a, b))))
-          | _ => runtimeError (chunk, ip, "Operands must be numbers.")
+              continue (1, push (stack, cons (f (a, b))), env)
+          | _ => (runtimeError (chunk, ip, "Operands must be numbers."), env)
         end
     in
       if Debug.traceExecution then
@@ -56,40 +64,80 @@ struct
         ();
 
       case Chunk.getOpcode (chunk, ip) of
-        Op.Constant => continue (2, push (stack, readConstant (chunk, ip + 1)))
-      | Op.Nil => continue (1, push (stack, V.Nil))
-      | Op.True => continue (1, push (stack, V.Boolean true))
-      | Op.False => continue (1, push (stack, V.Boolean false))
+        Op.Constant => continue (2, push (stack, readConstant (chunk, ip)), env)
+      | Op.Nil => continue (1, push (stack, V.Nil), env)
+      | Op.True => continue (1, push (stack, V.Boolean true), env)
+      | Op.False => continue (1, push (stack, V.Boolean false), env)
+      | Op.Pop => let val (_, stack) = pop stack in continue (1, stack, env) end
+      | Op.GetGlobal =>
+          let
+            val name = readString (chunk, ip)
+          in
+            case Env.find (env, name) of
+              SOME value => continue (2, push (stack, value), env)
+            | NONE =>
+                let val message = "Undefined variable '" ^ name ^ "'."
+                in (runtimeError (chunk, ip, message), env)
+                end
+          end
+      | Op.DefineGlobal =>
+          let
+            val name = readString (chunk, ip)
+            val (v, stack) = pop stack
+            val env = Env.insert (env, name, v)
+          in
+            continue (2, stack, env)
+          end
       | Op.Equal =>
           let
-            val (a, stack) = pop stack
             val (b, stack) = pop stack
+            val (a, stack) = pop stack
           in
-            continue (1, push (stack, V.Boolean (V.isEqual (a, b))))
+            continue (1, push (stack, V.Boolean (V.isEqual (a, b))), env)
           end
       | Op.Greater => binaryOp (V.Boolean, op>)
       | Op.Less => binaryOp (V.Boolean, op<)
-      | Op.Add => binaryOp (V.Number, op+)
+      | Op.Add =>
+          let
+            val (b, stack) = pop stack
+            val (a, stack) = pop stack
+          in
+            case (a, b) of
+              (V.String a, V.String b) =>
+                continue (1, push (stack, V.String (concat [a, b])), env)
+            | (V.Number a, V.Number b) =>
+                continue (1, push (stack, V.Number (a + b)), env)
+            | _ =>
+                let val message = "Operands must be two numbers or two strings."
+                in (runtimeError (chunk, ip, message), env)
+                end
+          end
       | Op.Subtract => binaryOp (V.Number, op-)
       | Op.Multiply => binaryOp (V.Number, op*)
       | Op.Divide => binaryOp (V.Number, op/)
       | Op.Not =>
           let val (v, stack) = pop stack
-          in continue (1, push (stack, V.Boolean (V.isFalsy v)))
+          in continue (1, push (stack, V.Boolean (V.isFalsy v)), env)
           end
       | Op.Negate =>
           let
             val (v, stack) = pop stack
           in
             case v of
-              V.Number n => continue (1, push (stack, V.Number (~n)))
-            | _ => runtimeError (chunk, ip, "Operand must be a number.")
+              V.Number n => continue (1, push (stack, V.Number (~n)), env)
+            | _ => (runtimeError (chunk, ip, "Operand must be a number."), env)
           end
-      | Op.Return => let val (v, _) = pop stack in V.print v; print "\n"; Ok end
+      | Op.Print =>
+          let val (v, stack) = pop stack
+          in V.print v; print "\n"; continue (1, stack, env)
+          end
+      | Op.Return => (Ok, env)
     end
 
-  fun interpret source =
+  fun baseEnv () = Env.empty
+
+  fun interpret (source, env) =
     case Compiler.compile source of
-      SOME chunk => run (chunk, 0, [])
-    | NONE => CompileError
+      SOME chunk => run (chunk, 0, [], env)
+    | NONE => (CompileError, env)
 end

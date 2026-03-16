@@ -55,6 +55,9 @@ struct
       | Op.Nil => simpleInstruction ("NIL", offset)
       | Op.True => simpleInstruction ("TRUE", offset)
       | Op.False => simpleInstruction ("FALSE", offset)
+      | Op.Pop => simpleInstruction ("POP", offset)
+      | Op.GetGlobal => constantInstruction ("GET_GLOBAL", chunk, offset)
+      | Op.DefineGlobal => constantInstruction ("DEFINE_GLOBAL", chunk, offset)
       | Op.Equal => simpleInstruction ("EQUAL", offset)
       | Op.Greater => simpleInstruction ("GREATER", offset)
       | Op.Less => simpleInstruction ("LESS", offset)
@@ -64,6 +67,7 @@ struct
       | Op.Divide => simpleInstruction ("DIVIDE", offset)
       | Op.Not => simpleInstruction ("NOT", offset)
       | Op.Negate => simpleInstruction ("NEGATE", offset)
+      | Op.Print => simpleInstruction ("PRINT", offset)
       | Op.Return => simpleInstruction ("RETURN", offset)
     end
 end

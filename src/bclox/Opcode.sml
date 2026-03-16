@@ -5,6 +5,9 @@ sig
   | Nil
   | True
   | False
+  | Pop
+  | GetGlobal
+  | DefineGlobal
   | Equal
   | Greater
   | Less
@@ -14,6 +17,7 @@ sig
   | Divide
   | Not
   | Negate
+  | Print
   | Return
 
   val encode: t -> Word8.word
@@ -25,6 +29,9 @@ struct
   | Nil
   | True
   | False
+  | Pop
+  | GetGlobal
+  | DefineGlobal
   | Equal
   | Greater
   | Less
@@ -34,6 +41,7 @@ struct
   | Divide
   | Not
   | Negate
+  | Print
   | Return
 
   val encode =
@@ -41,31 +49,39 @@ struct
      | Nil => 0w1
      | True => 0w2
      | False => 0w3
-     | Equal => 0w4
-     | Greater => 0w5
-     | Less => 0w6
-     | Add => 0w7
-     | Subtract => 0w8
-     | Multiply => 0w9
-     | Divide => 0w10
-     | Not => 0w11
-     | Negate => 0w12
-     | Return => 0w13
+     | Pop => 0w4
+     | GetGlobal => 0w5
+     | DefineGlobal => 0w6
+     | Equal => 0w7
+     | Greater => 0w8
+     | Less => 0w9
+     | Add => 0w10
+     | Subtract => 0w11
+     | Multiply => 0w12
+     | Divide => 0w13
+     | Not => 0w14
+     | Negate => 0w15
+     | Print => 0w16
+     | Return => 0w17
 
   val decode =
     fn 0w0 => Constant
      | 0w1 => Nil
      | 0w2 => True
      | 0w3 => False
-     | 0w4 => Equal
-     | 0w5 => Greater
-     | 0w6 => Less
-     | 0w7 => Add
-     | 0w8 => Subtract
-     | 0w9 => Multiply
-     | 0w10 => Divide
-     | 0w11 => Not
-     | 0w12 => Negate
-     | 0w13 => Return
+     | 0w4 => Pop
+     | 0w5 => GetGlobal
+     | 0w6 => DefineGlobal
+     | 0w7 => Equal
+     | 0w8 => Greater
+     | 0w9 => Less
+     | 0w10 => Add
+     | 0w11 => Subtract
+     | 0w12 => Multiply
+     | 0w13 => Divide
+     | 0w14 => Not
+     | 0w15 => Negate
+     | 0w16 => Print
+     | 0w17 => Return
      | opcode => raise Fail ("invalid opcode " ^ Word8.toString opcode)
 end

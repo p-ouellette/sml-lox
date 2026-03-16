@@ -1,8 +1,11 @@
 Group is
 
 $/basis.cm
+$/smlnj-lib.cm
+StringMap.sml
 smlnj-IntArray.sml
 Opcode.sml
+Environment.sml
 Value.sml
 ValueArray.sml
 Chunk.sml

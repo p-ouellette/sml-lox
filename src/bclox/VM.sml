@@ -18,6 +18,9 @@ struct
   fun pop [] = raise Empty
     | pop (v :: stack) = (v, stack)
 
+  fun peek [] = raise Empty
+    | peek (v :: _) = v
+
   fun eprint s =
     (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
@@ -87,6 +90,17 @@ struct
             val env = Env.insert (env, name, v)
           in
             continue (2, stack, env)
+          end
+      | Op.SetGlobal =>
+          let
+            val name = readString (chunk, ip)
+          in
+            if Env.defined (env, name) then
+              continue (2, stack, Env.insert (env, name, peek stack))
+            else
+              let val message = "Undefined variable '" ^ name ^ "'."
+              in (runtimeError (chunk, ip, message), env)
+              end
           end
       | Op.Equal =>
           let

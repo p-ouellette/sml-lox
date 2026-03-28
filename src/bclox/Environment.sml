@@ -6,6 +6,7 @@ sig
   val empty: 'a t
   val insert: 'a t * string * 'a -> 'a t
   val find: 'a t * string -> 'a option
+  val defined: 'a t * string -> bool
 end =
 struct
   type 'a t = 'a StringMap.map
@@ -13,4 +14,5 @@ struct
   val empty = StringMap.empty
   val insert = StringMap.insert
   val find = StringMap.find
+  val defined = StringMap.inDomain
 end

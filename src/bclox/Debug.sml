@@ -58,6 +58,7 @@ struct
       | Op.Pop => simpleInstruction ("POP", offset)
       | Op.GetGlobal => constantInstruction ("GET_GLOBAL", chunk, offset)
       | Op.DefineGlobal => constantInstruction ("DEFINE_GLOBAL", chunk, offset)
+      | Op.SetGlobal => constantInstruction ("SET_GLOBAL", chunk, offset)
       | Op.Equal => simpleInstruction ("EQUAL", offset)
       | Op.Greater => simpleInstruction ("GREATER", offset)
       | Op.Less => simpleInstruction ("LESS", offset)

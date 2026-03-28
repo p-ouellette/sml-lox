@@ -18,7 +18,7 @@ struct
       val strm = TIO.openIn fname
       val prog = TIO.inputAll strm
       val () = TIO.closeIn strm
-      val (result, _) = VM.interpret (prog, VM.baseEnv ())
+      val (result, _) = VM.interpret (prog, Globals.new ())
     in
       case result of
         VM.Ok => Status.success
@@ -34,7 +34,7 @@ struct
     )
 
   fun main [] =
-        runPrompt (VM.baseEnv ())
+        runPrompt (Globals.new ())
     | main [fname] = runFile fname
     | main _ =
         (print "Usage: bclox [script]"; Status.usageError)

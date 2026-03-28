@@ -2,14 +2,11 @@ structure VM:
 sig
   datatype result = Ok | CompileError | RuntimeError
 
-  val baseEnv: unit -> Value.t Environment.t
-  val interpret: string * Value.t Environment.t
-                 -> result * Value.t Environment.t
+  val interpret: string * Globals.t -> result * Globals.t
 end =
 struct
   structure Op = Opcode
   structure V = Value
-  structure Env = Environment
 
   datatype result = Ok | CompileError | RuntimeError
 
@@ -41,10 +38,10 @@ struct
       V.String s => s
     | _ => raise Fail "expected string constant"
 
-  fun run (chunk, ip, stack, env) =
+  fun run (chunk, ip, stack, globals) =
     let
-      fun continue (offset, stack, env) =
-        run (chunk, ip + offset, stack, env)
+      fun continue (offset, stack, globals) =
+        run (chunk, ip + offset, stack, globals)
 
       fun binaryOp (cons, f) =
         let
@@ -53,8 +50,9 @@ struct
         in
           case (a, b) of
             (V.Number a, V.Number b) =>
-              continue (1, push (stack, cons (f (a, b))), env)
-          | _ => (runtimeError (chunk, ip, "Operands must be numbers."), env)
+              continue (1, push (stack, cons (f (a, b))), globals)
+          | _ =>
+              (runtimeError (chunk, ip, "Operands must be numbers."), globals)
         end
     in
       if Debug.traceExecution then
@@ -67,39 +65,43 @@ struct
         ();
 
       case Chunk.getOpcode (chunk, ip) of
-        Op.Constant => continue (2, push (stack, readConstant (chunk, ip)), env)
-      | Op.Nil => continue (1, push (stack, V.Nil), env)
-      | Op.True => continue (1, push (stack, V.Boolean true), env)
-      | Op.False => continue (1, push (stack, V.Boolean false), env)
-      | Op.Pop => let val (_, stack) = pop stack in continue (1, stack, env) end
+        Op.Constant =>
+          continue (2, push (stack, readConstant (chunk, ip)), globals)
+      | Op.Nil => continue (1, push (stack, V.Nil), globals)
+      | Op.True => continue (1, push (stack, V.Boolean true), globals)
+      | Op.False => continue (1, push (stack, V.Boolean false), globals)
+      | Op.Pop =>
+          let val (_, stack) = pop stack
+          in continue (1, stack, globals)
+          end
       | Op.GetGlobal =>
           let
             val name = readString (chunk, ip)
           in
-            case Env.find (env, name) of
-              SOME value => continue (2, push (stack, value), env)
+            case Globals.find (globals, name) of
+              SOME value => continue (2, push (stack, value), globals)
             | NONE =>
                 let val message = "Undefined variable '" ^ name ^ "'."
-                in (runtimeError (chunk, ip, message), env)
+                in (runtimeError (chunk, ip, message), globals)
                 end
           end
       | Op.DefineGlobal =>
           let
             val name = readString (chunk, ip)
             val (v, stack) = pop stack
-            val env = Env.insert (env, name, v)
+            val globals = Globals.insert (globals, name, v)
           in
-            continue (2, stack, env)
+            continue (2, stack, globals)
           end
       | Op.SetGlobal =>
           let
             val name = readString (chunk, ip)
           in
-            if Env.defined (env, name) then
-              continue (2, stack, Env.insert (env, name, peek stack))
+            if Globals.defined (globals, name) then
+              continue (2, stack, Globals.insert (globals, name, peek stack))
             else
               let val message = "Undefined variable '" ^ name ^ "'."
-              in (runtimeError (chunk, ip, message), env)
+              in (runtimeError (chunk, ip, message), globals)
               end
           end
       | Op.Equal =>
@@ -107,7 +109,7 @@ struct
             val (b, stack) = pop stack
             val (a, stack) = pop stack
           in
-            continue (1, push (stack, V.Boolean (V.isEqual (a, b))), env)
+            continue (1, push (stack, V.Boolean (V.isEqual (a, b))), globals)
           end
       | Op.Greater => binaryOp (V.Boolean, op>)
       | Op.Less => binaryOp (V.Boolean, op<)
@@ -118,12 +120,12 @@ struct
           in
             case (a, b) of
               (V.String a, V.String b) =>
-                continue (1, push (stack, V.String (concat [a, b])), env)
+                continue (1, push (stack, V.String (concat [a, b])), globals)
             | (V.Number a, V.Number b) =>
-                continue (1, push (stack, V.Number (a + b)), env)
+                continue (1, push (stack, V.Number (a + b)), globals)
             | _ =>
                 let val message = "Operands must be two numbers or two strings."
-                in (runtimeError (chunk, ip, message), env)
+                in (runtimeError (chunk, ip, message), globals)
                 end
           end
       | Op.Subtract => binaryOp (V.Number, op-)
@@ -131,27 +133,26 @@ struct
       | Op.Divide => binaryOp (V.Number, op/)
       | Op.Not =>
           let val (v, stack) = pop stack
-          in continue (1, push (stack, V.Boolean (V.isFalsy v)), env)
+          in continue (1, push (stack, V.Boolean (V.isFalsy v)), globals)
           end
       | Op.Negate =>
           let
             val (v, stack) = pop stack
           in
             case v of
-              V.Number n => continue (1, push (stack, V.Number (~n)), env)
-            | _ => (runtimeError (chunk, ip, "Operand must be a number."), env)
+              V.Number n => continue (1, push (stack, V.Number (~n)), globals)
+            | _ =>
+                (runtimeError (chunk, ip, "Operand must be a number."), globals)
           end
       | Op.Print =>
           let val (v, stack) = pop stack
-          in V.print v; print "\n"; continue (1, stack, env)
+          in V.print v; print "\n"; continue (1, stack, globals)
           end
-      | Op.Return => (Ok, env)
+      | Op.Return => (Ok, globals)
     end
 
-  fun baseEnv () = Env.empty
-
-  fun interpret (source, env) =
+  fun interpret (source, globals) =
     case Compiler.compile source of
-      SOME chunk => run (chunk, 0, [], env)
-    | NONE => (CompileError, env)
+      SOME chunk => run (chunk, 0, [], globals)
+    | NONE => (CompileError, globals)
 end

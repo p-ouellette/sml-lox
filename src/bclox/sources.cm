@@ -5,7 +5,6 @@ $/smlnj-lib.cm
 StringMap.sml
 smlnj-IntArray.sml
 Opcode.sml
-Environment.sml
 Value.sml
 ValueArray.sml
 Chunk.sml
@@ -13,5 +12,6 @@ Debug.sml
 Token.sml
 Scanner.sml
 Compiler.sml
+Globals.sml
 VM.sml
 Main.sml

@@ -16,17 +16,24 @@ struct
 
   type parse_prec_fn = parser * Chunk.t -> bool -> parser
 
+  type local_ = {name: Token.t, depth: int}
+  type compiler = {locals: local_ Array.array, localCount: int, scopeDepth: int}
+
+  val dummyToken = {kind = T.Eof, lexeme = "", line = 0}
+
   fun newParser source =
-    let
-      val dummy = {kind = T.Eof, lexeme = "", line = 0}
-    in
-      { scanner = Scanner.new source
-      , current = dummy
-      , previous = dummy
-      , hadError = ref false
-      , panicMode = ref false
-      }
-    end
+    { scanner = Scanner.new source
+    , current = dummyToken
+    , previous = dummyToken
+    , hadError = ref false
+    , panicMode = ref false
+    }
+
+  fun newCompiler () =
+    { locals = Array.array (256, {name = dummyToken, depth = 0})
+    , localCount = 0
+    , scopeDepth = 0
+    }
 
   fun hadError (parser: parser) =
     !(#hadError parser)
@@ -364,9 +371,10 @@ struct
 
   fun compile source =
     let
+      val compiler = newCompiler ()
       val chunk = Chunk.new ()
-      val parser = advance (newParser source)
-      val parser = program (parser, chunk)
+      val parser = newParser source
+      val parser = program (advance parser, chunk)
     in
       emitReturn (parser, chunk);
       if Debug.printCode then Debug.disassembleChunk (chunk, "code") else ();

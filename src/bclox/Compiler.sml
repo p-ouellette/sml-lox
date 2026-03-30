@@ -242,14 +242,14 @@ struct
 
   and program parser chunk =
     case match (parser, T.Eof) of
-      SOME parser' => parser'
+      SOME parser => parser
     | NONE => program (declaration parser chunk) chunk
 
   and declaration parser chunk =
     let
       val parser =
         case match (parser, T.Var) of
-          SOME parser' => varDeclaration parser' chunk
+          SOME parser => varDeclaration parser chunk
         | NONE => statement parser chunk
     in
       if panicMode parser then synchronize parser else parser
@@ -261,7 +261,7 @@ struct
         parseVariable (parser, chunk) "Expect variable name."
       val parser =
         case match (parser, T.Equal) of
-          SOME parser' => expression parser' chunk
+          SOME parser => expression parser chunk
         | NONE => (emitOpcode (parser, chunk) Op.Nil; parser)
       val parser = consume
         (parser, T.Semicolon, "Expect ';' after variable declaration.")
@@ -272,7 +272,7 @@ struct
 
   and statement parser chunk =
     case match (parser, T.Print) of
-      SOME parser' => printStatement parser' chunk
+      SOME parser => printStatement parser chunk
     | NONE => expressionStatement parser chunk
 
   and expressionStatement parser chunk =
@@ -301,7 +301,7 @@ struct
       val emitOp = emitOpcode (parser, chunk)
       val operatorKind = T.kind (#previous parser)
       val rule = getRule operatorKind
-      val parser' = parsePrecedence parser chunk (#precedence rule + 1)
+      val parser = parsePrecedence parser chunk (#precedence rule + 1)
     in
       case operatorKind of
         T.BangEqual => (emitOp Op.Equal; emitOp Op.Not)
@@ -315,7 +315,7 @@ struct
       | T.Star => emitOp Op.Multiply
       | T.Slash => emitOp Op.Divide
       | _ => raise Fail "expected binary operator";
-      parser'
+      parser
     end
 
   and unary parser chunk _ =

@@ -194,17 +194,17 @@ struct
     | T.And => makeRule (NONE, NONE, Prec.none)
     | T.Class => makeRule (NONE, NONE, Prec.none)
     | T.Else => makeRule (NONE, NONE, Prec.none)
-    | T.False => makeRule (SOME false_, NONE, Prec.none)
+    | T.False => makeRule (SOME literal, NONE, Prec.none)
     | T.Fun => makeRule (NONE, NONE, Prec.none)
     | T.For => makeRule (NONE, NONE, Prec.none)
     | T.If => makeRule (NONE, NONE, Prec.none)
-    | T.Nil => makeRule (SOME nil_, NONE, Prec.none)
+    | T.Nil => makeRule (SOME literal, NONE, Prec.none)
     | T.Or => makeRule (NONE, NONE, Prec.none)
     | T.Print => makeRule (NONE, NONE, Prec.none)
     | T.Return => makeRule (NONE, NONE, Prec.none)
     | T.Super => makeRule (NONE, NONE, Prec.none)
     | T.This => makeRule (NONE, NONE, Prec.none)
-    | T.True => makeRule (SOME true_, NONE, Prec.none)
+    | T.True => makeRule (SOME literal, NONE, Prec.none)
     | T.Var => makeRule (NONE, NONE, Prec.none)
     | T.While => makeRule (NONE, NONE, Prec.none)
     | T.Error => makeRule (NONE, NONE, Prec.none)
@@ -359,14 +359,17 @@ struct
         (emitConstInstr (parser, chunk) (Op.GetGlobal, constant); parser)
     end
 
-  and nil_ parser chunk _ =
-    (emitOpcode (parser, chunk) Op.Nil; parser)
-
-  and true_ parser chunk _ =
-    (emitOpcode (parser, chunk) Op.True; parser)
-
-  and false_ parser chunk _ =
-    (emitOpcode (parser, chunk) Op.False; parser)
+  and literal parser chunk _ =
+    let
+      val emitOp = emitOpcode (parser, chunk)
+    in
+      case T.kind (#previous parser) of
+        T.Nil => emitOp Op.Nil
+      | T.True => emitOp Op.True
+      | T.False => emitOp Op.False
+      | _ => raise Fail "expected literal";
+      parser
+    end
 
   and grouping parser chunk _ =
     consume

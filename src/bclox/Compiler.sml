@@ -14,7 +14,7 @@ struct
     , panicMode: bool ref
     }
 
-  type parse_prec_fn = parser * Chunk.t -> bool -> parser
+  type parse_prec_fn = parser -> Chunk.t -> bool -> parser
 
   type local_ = {name: Token.t, depth: int}
   type compiler = {locals: local_ Array.array, localCount: int, scopeDepth: int}
@@ -114,8 +114,8 @@ struct
   fun emitByte (parser: parser, chunk) byte =
     Chunk.write (chunk, byte, T.line (#previous parser))
 
-  fun emitOpcode (parser, chunk) opcode =
-    emitByte (parser, chunk) (Op.encode opcode)
+  fun emitOpcode args opcode =
+    emitByte args (Op.encode opcode)
 
   fun emitConstInstr args (opcode, constant) =
     (emitOpcode args opcode; emitByte args constant)
@@ -210,14 +210,14 @@ struct
     | T.Error => makeRule (NONE, NONE, Prec.none)
     | T.Eof => makeRule (NONE, NONE, Prec.none)
 
-  and parsePrecedence (parser, chunk) precedence =
+  and parsePrecedence parser chunk precedence =
     let
       val parser = advance parser
       val rule = getRule (T.kind (#previous parser))
       val canAssign = precedence <= Prec.assignment
       val parser =
         case #prefix rule of
-          SOME prefixRule => prefixRule (parser, chunk) canAssign
+          SOME prefixRule => prefixRule parser chunk canAssign
         | NONE => (error (parser, "Expect expression."); parser)
       fun parseInfix parser =
         let
@@ -226,7 +226,7 @@ struct
           if precedence <= #precedence rule then
             case #infix_ rule of
               SOME infixRule =>
-                parseInfix (infixRule (advance parser, chunk) canAssign)
+                parseInfix (infixRule (advance parser) chunk canAssign)
             | NONE => raise Fail "missing infix rule"
           else
             parser
@@ -240,28 +240,29 @@ struct
       parser
     end
 
-  and program (args as (parser, chunk)) =
+  and program parser chunk =
     case match (parser, T.Eof) of
       SOME parser' => parser'
-    | NONE => program (declaration args, chunk)
+    | NONE => program (declaration parser chunk) chunk
 
-  and declaration (args as (parser, chunk)) =
+  and declaration parser chunk =
     let
       val parser =
         case match (parser, T.Var) of
-          SOME parser' => varDeclaration (parser', chunk)
-        | NONE => statement args
+          SOME parser' => varDeclaration parser' chunk
+        | NONE => statement parser chunk
     in
       if panicMode parser then synchronize parser else parser
     end
 
-  and varDeclaration (args as (_, chunk)) =
+  and varDeclaration parser chunk =
     let
-      val (parser, global) = parseVariable args "Expect variable name."
+      val (parser, global) =
+        parseVariable (parser, chunk) "Expect variable name."
       val parser =
         case match (parser, T.Equal) of
-          SOME parser' => expression (parser', chunk)
-        | NONE => nil_ (parser, chunk) false
+          SOME parser' => expression parser' chunk
+        | NONE => (emitOpcode (parser, chunk) Op.Nil; parser)
       val parser = consume
         (parser, T.Semicolon, "Expect ';' after variable declaration.")
     in
@@ -269,37 +270,38 @@ struct
       parser
     end
 
-  and statement (args as (parser, chunk)) =
+  and statement parser chunk =
     case match (parser, T.Print) of
-      SOME parser' => printStatement (parser', chunk)
-    | NONE => expressionStatement args
+      SOME parser' => printStatement parser' chunk
+    | NONE => expressionStatement parser chunk
 
-  and expressionStatement (args as (_, chunk)) =
+  and expressionStatement parser chunk =
     let
-      val parser = expression args
+      val parser = expression parser chunk
       val parser = consume (parser, T.Semicolon, "Expect ';' after expression.")
     in
       emitOpcode (parser, chunk) Op.Pop;
       parser
     end
 
-  and printStatement (args as (_, chunk)) =
+  and printStatement parser chunk =
     let
-      val parser = expression args
+      val parser = expression parser chunk
       val parser = consume (parser, T.Semicolon, "Expect ';' after value.")
     in
       emitOpcode (parser, chunk) Op.Print;
       parser
     end
 
-  and expression args = parsePrecedence args Prec.assignment
+  and expression parser chunk =
+    parsePrecedence parser chunk Prec.assignment
 
-  and binary (args as (parser, _)) _ =
+  and binary parser chunk _ =
     let
-      val emitOp = emitOpcode args
+      val emitOp = emitOpcode (parser, chunk)
       val operatorKind = T.kind (#previous parser)
       val rule = getRule operatorKind
-      val parser' = parsePrecedence args (#precedence rule + 1)
+      val parser' = parsePrecedence parser chunk (#precedence rule + 1)
     in
       case operatorKind of
         T.BangEqual => (emitOp Op.Equal; emitOp Op.Not)
@@ -316,65 +318,66 @@ struct
       parser'
     end
 
-  and unary (args as (parser, _)) _ =
+  and unary parser chunk _ =
     let
       val operatorKind = T.kind (#previous parser)
-      val parser' = parsePrecedence args Prec.unary
+      val parser' = parsePrecedence parser chunk Prec.unary
     in
       case operatorKind of
-        T.Bang => emitOpcode args Op.Not
-      | T.Minus => emitOpcode args Op.Negate
+        T.Bang => emitOpcode (parser, chunk) Op.Not
+      | T.Minus => emitOpcode (parser, chunk) Op.Negate
       | _ => raise Fail "expected unary operator";
       parser'
     end
 
-  and number (args as (parser, _)) _ =
+  and number parser chunk _ =
     let val n = valOf (Real.fromString (T.lexeme (#previous parser)))
-    in emitConstant args (Value.Number n); parser
+    in emitConstant (parser, chunk) (Value.Number n); parser
     end
 
-  and string (args as (parser, _)) _ =
+  and string parser chunk _ =
     let
       val lexeme = T.lexeme (#previous parser)
       val s = String.substring (lexeme, 1, size lexeme - 2)
     in
-      emitConstant args (Value.String s);
+      emitConstant (parser, chunk) (Value.String s);
       parser
     end
 
-  and variable (args as (parser, _)) canAssign =
-    namedVariable args (#previous parser, canAssign)
+  and variable parser chunk canAssign =
+    namedVariable (parser, chunk) (#previous parser, canAssign)
 
   and namedVariable (args as (parser, chunk)) (name, canAssign) =
     let
       val constant = identifierConstant args name
     in
       if canAssign andalso check (parser, T.Equal) then
-        let val parser = expression (advance parser, chunk)
+        let val parser = expression (advance parser) chunk
         in emitConstInstr (parser, chunk) (Op.SetGlobal, constant); parser
         end
       else
         (emitConstInstr (parser, chunk) (Op.GetGlobal, constant); parser)
     end
 
-  and nil_ (args as (parser, _)) _ =
-    (emitOpcode args Op.Nil; parser)
+  and nil_ parser chunk _ =
+    (emitOpcode (parser, chunk) Op.Nil; parser)
 
-  and true_ (args as (parser, _)) _ =
-    (emitOpcode args Op.True; parser)
+  and true_ parser chunk _ =
+    (emitOpcode (parser, chunk) Op.True; parser)
 
-  and false_ (args as (parser, _)) _ =
-    (emitOpcode args Op.False; parser)
+  and false_ parser chunk _ =
+    (emitOpcode (parser, chunk) Op.False; parser)
 
-  and grouping args _ =
-    consume (expression args, T.RightParen, "Expect ')' after expression.")
+  and grouping parser chunk _ =
+    consume
+      (expression parser chunk, T.RightParen, "Expect ')' after expression.")
 
   fun compile source =
     let
       val compiler = newCompiler ()
       val chunk = Chunk.new ()
       val parser = newParser source
-      val parser = program (advance parser, chunk)
+      val parser = program (advance parser) chunk
     in
       emitReturn (parser, chunk);
       if Debug.printCode then Debug.disassembleChunk (chunk, "code") else ();

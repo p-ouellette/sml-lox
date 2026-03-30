@@ -114,11 +114,13 @@ struct
   fun emitByte (parser: parser, chunk) byte =
     Chunk.write (chunk, byte, T.line (#previous parser))
 
-  fun emitBytes args (byte1, byte2) =
-    (emitByte args byte1; emitByte args byte2)
+  fun emitOpcode (parser, chunk) opcode =
+    emitByte (parser, chunk) (Op.encode opcode)
 
-  fun emitReturn args =
-    emitByte args (Op.encode Op.Return)
+  fun emitConstInstr args (opcode, constant) =
+    (emitOpcode args opcode; emitByte args constant)
+
+  fun emitReturn args = emitOpcode args Op.Return
 
   fun makeConstant (parser, chunk) value =
     let
@@ -130,9 +132,7 @@ struct
     end
 
   fun emitConstant args value =
-    let val constant = makeConstant args value
-    in emitBytes args (Op.encode Op.Constant, constant)
-    end
+    emitConstInstr args (Op.Constant, makeConstant args value)
 
   fun identifierConstant args name =
     makeConstant args (Value.String (T.lexeme name))
@@ -145,8 +145,7 @@ struct
       (parser, constant)
     end
 
-  fun defineVariable args global =
-    emitBytes args (Op.encode Op.DefineGlobal, global)
+  fun defineVariable args global = emitConstInstr args (Op.DefineGlobal, global)
 
   structure Precedence =
   struct
@@ -280,7 +279,7 @@ struct
       val parser = expression args
       val parser = consume (parser, T.Semicolon, "Expect ';' after expression.")
     in
-      emitByte (parser, chunk) (Op.encode Op.Pop);
+      emitOpcode (parser, chunk) Op.Pop;
       parser
     end
 
@@ -289,7 +288,7 @@ struct
       val parser = expression args
       val parser = consume (parser, T.Semicolon, "Expect ';' after value.")
     in
-      emitByte (parser, chunk) (Op.encode Op.Print);
+      emitOpcode (parser, chunk) Op.Print;
       parser
     end
 
@@ -297,21 +296,22 @@ struct
 
   and binary (args as (parser, _)) _ =
     let
+      val emitOp = emitOpcode args
       val operatorKind = T.kind (#previous parser)
       val rule = getRule operatorKind
       val parser' = parsePrecedence args (#precedence rule + 1)
     in
       case operatorKind of
-        T.BangEqual => emitBytes args (Op.encode Op.Equal, Op.encode Op.Not)
-      | T.EqualEqual => emitByte args (Op.encode Op.Equal)
-      | T.Greater => emitByte args (Op.encode Op.Greater)
-      | T.GreaterEqual => emitBytes args (Op.encode Op.Less, Op.encode Op.Not)
-      | T.Less => emitByte args (Op.encode Op.Less)
-      | T.LessEqual => emitBytes args (Op.encode Op.Greater, Op.encode Op.Not)
-      | T.Plus => emitByte args (Op.encode Op.Add)
-      | T.Minus => emitByte args (Op.encode Op.Subtract)
-      | T.Star => emitByte args (Op.encode Op.Multiply)
-      | T.Slash => emitByte args (Op.encode Op.Divide)
+        T.BangEqual => (emitOp Op.Equal; emitOp Op.Not)
+      | T.EqualEqual => emitOp Op.Equal
+      | T.Greater => emitOp Op.Greater
+      | T.GreaterEqual => (emitOp Op.Less; emitOp Op.Not)
+      | T.Less => emitOp Op.Less
+      | T.LessEqual => (emitOp Op.Greater; emitOp Op.Not)
+      | T.Plus => emitOp Op.Add
+      | T.Minus => emitOp Op.Subtract
+      | T.Star => emitOp Op.Multiply
+      | T.Slash => emitOp Op.Divide
       | _ => raise Fail "expected binary operator";
       parser'
     end
@@ -322,8 +322,8 @@ struct
       val parser' = parsePrecedence args Prec.unary
     in
       case operatorKind of
-        T.Bang => emitByte args (Op.encode Op.Not)
-      | T.Minus => emitByte args (Op.encode Op.Negate)
+        T.Bang => emitOpcode args Op.Not
+      | T.Minus => emitOpcode args Op.Negate
       | _ => raise Fail "expected unary operator";
       parser'
     end
@@ -351,20 +351,20 @@ struct
     in
       if canAssign andalso check (parser, T.Equal) then
         let val parser = expression (advance parser, chunk)
-        in emitBytes (parser, chunk) (Op.encode Op.SetGlobal, constant); parser
+        in emitConstInstr (parser, chunk) (Op.SetGlobal, constant); parser
         end
       else
-        (emitBytes (parser, chunk) (Op.encode Op.GetGlobal, constant); parser)
+        (emitConstInstr (parser, chunk) (Op.GetGlobal, constant); parser)
     end
 
   and nil_ (args as (parser, _)) _ =
-    (emitByte args (Op.encode Op.Nil); parser)
+    (emitOpcode args Op.Nil; parser)
 
   and true_ (args as (parser, _)) _ =
-    (emitByte args (Op.encode Op.True); parser)
+    (emitOpcode args Op.True; parser)
 
   and false_ (args as (parser, _)) _ =
-    (emitByte args (Op.encode Op.False); parser)
+    (emitOpcode args Op.False; parser)
 
   and grouping args _ =
     consume (expression args, T.RightParen, "Expect ')' after expression.")
